@@ -43,24 +43,6 @@ class _OwnerMainScreenState extends State<OwnerMainScreen> {
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _updateSelectedIndex();
-  }
-
-  void _updateSelectedIndex() {
-    final String location = GoRouter.of(context).location;
-    for (int i = 0; i < _items.length; i++) {
-      if (location.startsWith(_items[i].route)) {
-        setState(() {
-          _selectedIndex = i;
-        });
-        break;
-      }
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: widget.child,
@@ -89,10 +71,14 @@ class _OwnerMainScreenState extends State<OwnerMainScreen> {
                   onTap: () => _onItemTapped(index),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                     decoration: BoxDecoration(
-                      color: isSelected 
-                          ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
+                      color: isSelected
+                          ? Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withOpacity(0.1)
                           : Colors.transparent,
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -101,9 +87,12 @@ class _OwnerMainScreenState extends State<OwnerMainScreen> {
                       children: [
                         Icon(
                           isSelected ? item.activeIcon : item.icon,
-                          color: isSelected 
+                          color: isSelected
                               ? Theme.of(context).colorScheme.primary
-                              : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                              : Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withOpacity(0.6),
                           size: 24,
                         ),
                         const SizedBox(height: 4),
@@ -111,10 +100,14 @@ class _OwnerMainScreenState extends State<OwnerMainScreen> {
                           item.label,
                           style: GoogleFonts.poppins(
                             fontSize: 12,
-                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                            color: isSelected 
+                            fontWeight:
+                                isSelected ? FontWeight.w600 : FontWeight.w400,
+                            color: isSelected
                                 ? Theme.of(context).colorScheme.primary
-                                : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                                : Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withOpacity(0.6),
                           ),
                         ),
                       ],

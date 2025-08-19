@@ -1,4 +1,4 @@
-part of 'reviews.dart';
+part of 'reviews_bloc.dart';
 
 abstract class ReviewsState extends Equatable {
   const ReviewsState();
