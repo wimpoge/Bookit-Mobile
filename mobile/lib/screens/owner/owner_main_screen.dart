@@ -28,6 +28,12 @@ class _OwnerMainScreenState extends State<OwnerMainScreen> {
       label: 'Bookings',
     ),
     OwnerNavigationItem(
+      route: '/owner/chats',
+      icon: Icons.chat_bubble_outline,
+      activeIcon: Icons.chat_bubble,
+      label: 'Chats',
+    ),
+    OwnerNavigationItem(
       route: '/owner/profile',
       icon: Icons.person_outline,
       activeIcon: Icons.person,

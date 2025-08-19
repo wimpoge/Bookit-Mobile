@@ -30,9 +30,9 @@ class _LoginScreenState extends State<LoginScreen> {
   void _handleLogin() {
     if (_formKey.currentState?.validate() ?? false) {
       context.read<AuthBloc>().add(AuthLoginEvent(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-      ));
+            email: _emailController.text.trim(),
+            password: _passwordController.text,
+          ));
     }
   }
 
@@ -63,7 +63,7 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               children: [
                 const SizedBox(height: 60),
-                
+
                 // Logo
                 Container(
                   width: 80,
@@ -83,9 +83,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                 ),
-                
+
                 const SizedBox(height: 32),
-                
+
                 // Welcome text
                 Text(
                   'Welcome to BookIt',
@@ -95,9 +95,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     color: Theme.of(context).colorScheme.onBackground,
                   ),
                 ),
-                
+
                 const SizedBox(height: 8),
-                
+
                 Text(
                   'Your perfect stay awaits',
                   style: GoogleFonts.poppins(
@@ -105,9 +105,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     color: Theme.of(context).colorScheme.secondary,
                   ),
                 ),
-                
+
                 const SizedBox(height: 48),
-                
+
                 // Tab buttons
                 Container(
                   decoration: BoxDecoration(
@@ -152,9 +152,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     ],
                   ),
                 ),
-                
+
                 const SizedBox(height: 32),
-                
+
                 // Form
                 Form(
                   key: _formKey,
@@ -178,15 +178,16 @@ class _LoginScreenState extends State<LoginScreen> {
                           if (value?.isEmpty ?? true) {
                             return 'Please fill out this field.';
                           }
-                          if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value!)) {
+                          if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                              .hasMatch(value!)) {
                             return 'Please enter a valid email';
                           }
                           return null;
                         },
                       ),
-                      
+
                       const SizedBox(height: 24),
-                      
+
                       Text(
                         'Password',
                         style: GoogleFonts.poppins(
@@ -202,7 +203,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         prefixIcon: const Icon(Icons.lock_outline),
                         suffixIcon: IconButton(
                           icon: Icon(
-                            _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                            _obscurePassword
+                                ? Icons.visibility_off
+                                : Icons.visibility,
                           ),
                           onPressed: () {
                             setState(() {
@@ -217,9 +220,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           return null;
                         },
                       ),
-                      
+
                       const SizedBox(height: 16),
-                      
+
                       // Forgot password
                       Align(
                         alignment: Alignment.centerRight,
@@ -235,9 +238,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                       ),
-                      
+
                       const SizedBox(height: 32),
-                      
+
                       // Sign In button
                       BlocBuilder<AuthBloc, AuthState>(
                         builder: (context, state) {
@@ -249,13 +252,15 @@ class _LoginScreenState extends State<LoginScreen> {
                           );
                         },
                       ),
-                      
+
                       const SizedBox(height: 32),
-                      
+
                       // Or continue with
                       Row(
                         children: [
-                          Expanded(child: Divider(color: Theme.of(context).dividerColor)),
+                          Expanded(
+                              child: Divider(
+                                  color: Theme.of(context).dividerColor)),
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 16),
                             child: Text(
@@ -265,12 +270,14 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ),
                           ),
-                          Expanded(child: Divider(color: Theme.of(context).dividerColor)),
+                          Expanded(
+                              child: Divider(
+                                  color: Theme.of(context).dividerColor)),
                         ],
                       ),
-                      
+
                       const SizedBox(height: 24),
-                      
+
                       // Social buttons
                       Row(
                         children: [
@@ -282,7 +289,8 @@ class _LoginScreenState extends State<LoginScreen> {
                               icon: const Icon(Icons.g_mobiledata, size: 24),
                               label: const Text('Google'),
                               style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 16),
                               ),
                             ),
                           ),
@@ -295,7 +303,8 @@ class _LoginScreenState extends State<LoginScreen> {
                               icon: const Icon(Icons.facebook, size: 24),
                               label: const Text('Facebook'),
                               style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 16),
                               ),
                             ),
                           ),

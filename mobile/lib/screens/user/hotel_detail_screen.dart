@@ -54,15 +54,21 @@ class _HotelDetailScreenState extends State<HotelDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: BlocBuilder<HotelsBloc, HotelsState>(
-        builder: (context, state) {
-          if (state is HotelDetailLoading) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (state is HotelDetailLoaded) {
-            return _buildHotelDetail(state.hotel);
-          } else if (state is HotelsError) {
-            return Center(
+    return BlocBuilder<HotelsBloc, HotelsState>(
+      builder: (context, state) {
+        if (state is HotelDetailLoading) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        } else if (state is HotelDetailLoaded) {
+          return Scaffold(
+            body: _buildHotelDetail(state.hotel),
+            bottomSheet: _buildBottomSheet(
+                state.hotel), // ✅ Move bottomSheet to Scaffold level
+          );
+        } else if (state is HotelsError) {
+          return Scaffold(
+            body: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -96,10 +102,33 @@ class _HotelDetailScreenState extends State<HotelDetailScreen> {
                   ),
                 ],
               ),
-            );
-          }
-          return const SizedBox.shrink();
-        },
+            ),
+          );
+        }
+        return const Scaffold(body: SizedBox.shrink());
+      },
+    );
+  }
+
+  // ✅ Extract bottomSheet to separate method
+  Widget _buildBottomSheet(Hotel hotel) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        border: Border(
+          top: BorderSide(
+            color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+          ),
+        ),
+      ),
+      child: SafeArea(
+        child: CustomButton(
+          text: 'Book Now',
+          onPressed:
+              hotel.isAvailable ? () => _showBookingBottomSheet(hotel) : null,
+          icon: Icons.calendar_today,
+        ),
       ),
     );
   }
@@ -107,7 +136,6 @@ class _HotelDetailScreenState extends State<HotelDetailScreen> {
   Widget _buildHotelDetail(Hotel hotel) {
     return CustomScrollView(
       slivers: [
-        // App Bar with Images
         SliverAppBar(
           expandedHeight: 300,
           pinned: true,
@@ -140,8 +168,6 @@ class _HotelDetailScreenState extends State<HotelDetailScreen> {
                           );
                         },
                       ),
-
-                      // Image indicators
                       if (hotel.images.length > 1)
                         Positioned(
                           bottom: 16,
@@ -192,9 +218,7 @@ class _HotelDetailScreenState extends State<HotelDetailScreen> {
               ),
               child: IconButton(
                 icon: const Icon(Icons.favorite_border, color: Colors.white),
-                onPressed: () {
-                  // TODO: Implement favorites
-                },
+                onPressed: () {},
               ),
             ),
             Container(
@@ -211,15 +235,12 @@ class _HotelDetailScreenState extends State<HotelDetailScreen> {
             ),
           ],
         ),
-
-        // Hotel Info
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Title and Rating
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -265,10 +286,7 @@ class _HotelDetailScreenState extends State<HotelDetailScreen> {
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 8),
-
-                // Location
                 Row(
                   children: [
                     Icon(
@@ -294,17 +312,14 @@ class _HotelDetailScreenState extends State<HotelDetailScreen> {
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 16),
-
-                // Price and Availability
                 Row(
                   children: [
                     RichText(
                       text: TextSpan(
                         children: [
                           TextSpan(
-                            text: '\$${hotel.pricePerNight.toStringAsFixed(0)}',
+                            text: '\${hotel.pricePerNight.toStringAsFixed(0)}',
                             style: GoogleFonts.poppins(
                               fontSize: 28,
                               fontWeight: FontWeight.bold,
@@ -347,10 +362,7 @@ class _HotelDetailScreenState extends State<HotelDetailScreen> {
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 24),
-
-                // Description
                 if (hotel.description != null) ...[
                   Text(
                     'About',
@@ -374,8 +386,6 @@ class _HotelDetailScreenState extends State<HotelDetailScreen> {
                   ),
                   const SizedBox(height: 24),
                 ],
-
-                // Amenities
                 if (hotel.amenities.isNotEmpty) ...[
                   Text(
                     'Amenities',
@@ -427,8 +437,6 @@ class _HotelDetailScreenState extends State<HotelDetailScreen> {
                   ),
                   const SizedBox(height: 24),
                 ],
-
-                // Reviews Section
                 BlocBuilder<ReviewsBloc, ReviewsState>(
                   builder: (context, reviewState) {
                     if (reviewState is ReviewsLoaded &&
@@ -450,9 +458,7 @@ class _HotelDetailScreenState extends State<HotelDetailScreen> {
                               ),
                               const Spacer(),
                               TextButton(
-                                onPressed: () {
-                                  // TODO: Navigate to all reviews
-                                },
+                                onPressed: () {},
                                 child: Text(
                                   'See all (${reviewState.reviews.length})',
                                   style: GoogleFonts.poppins(
@@ -592,32 +598,12 @@ class _HotelDetailScreenState extends State<HotelDetailScreen> {
                     return const SizedBox.shrink();
                   },
                 ),
-
-                const SizedBox(height: 100), // Space for bottom button
+                const SizedBox(height: 100), // ✅ Add padding for bottomSheet
               ],
             ),
           ),
         ),
       ],
-      bottomSheet: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          border: Border(
-            top: BorderSide(
-              color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
-            ),
-          ),
-        ),
-        child: SafeArea(
-          child: CustomButton(
-            text: 'Book Now',
-            onPressed:
-                hotel.isAvailable ? () => _showBookingBottomSheet(hotel) : null,
-            icon: Icons.calendar_today,
-          ),
-        ),
-      ),
     );
   }
 

@@ -7,6 +7,7 @@ import '../models/booking.dart';
 import '../models/payment.dart';
 import '../models/review.dart';
 import '../models/chat_message.dart';
+import '../models/chat_conversation.dart';
 
 class ApiService {
   static const String baseUrl = 'http://localhost:8000/api';
@@ -17,9 +18,9 @@ class ApiService {
   }
 
   Map<String, String> get _headers => {
-    'Content-Type': 'application/json',
-    if (_token != null) 'Authorization': 'Bearer $_token',
-  };
+        'Content-Type': 'application/json',
+        if (_token != null) 'Authorization': 'Bearer $_token',
+      };
 
   Future<http.Response> _makeRequest(
     String method,
@@ -75,7 +76,8 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> register(Map<String, dynamic> userData) async {
-    final response = await _makeRequest('POST', '/auth/register', body: userData);
+    final response =
+        await _makeRequest('POST', '/auth/register', body: userData);
     return jsonDecode(response.body);
   }
 
@@ -108,7 +110,8 @@ class ApiService {
       if (amenities != null) 'amenities': amenities,
     };
 
-    final response = await _makeRequest('GET', '/hotels', queryParams: queryParams);
+    final response =
+        await _makeRequest('GET', '/hotels', queryParams: queryParams);
     final List<dynamic> data = jsonDecode(response.body);
     return data.map((json) => Hotel.fromJson(json)).toList();
   }
@@ -163,8 +166,10 @@ class ApiService {
     return Booking.fromJson(jsonDecode(response.body));
   }
 
-  Future<Booking> updateBooking(int id, Map<String, dynamic> bookingData) async {
-    final response = await _makeRequest('PUT', '/bookings/$id', body: bookingData);
+  Future<Booking> updateBooking(
+      int id, Map<String, dynamic> bookingData) async {
+    final response =
+        await _makeRequest('PUT', '/bookings/$id', body: bookingData);
     return Booking.fromJson(jsonDecode(response.body));
   }
 
@@ -173,7 +178,8 @@ class ApiService {
   }
 
   Future<List<Booking>> getHotelBookings() async {
-    final response = await _makeRequest('GET', '/bookings/owner/hotel-bookings');
+    final response =
+        await _makeRequest('GET', '/bookings/owner/hotel-bookings');
     final List<dynamic> data = jsonDecode(response.body);
     return data.map((json) => Booking.fromJson(json)).toList();
   }
@@ -193,13 +199,17 @@ class ApiService {
     return data.map((json) => PaymentMethod.fromJson(json)).toList();
   }
 
-  Future<PaymentMethod> addPaymentMethod(Map<String, dynamic> paymentData) async {
-    final response = await _makeRequest('POST', '/payments/methods', body: paymentData);
+  Future<PaymentMethod> addPaymentMethod(
+      Map<String, dynamic> paymentData) async {
+    final response =
+        await _makeRequest('POST', '/payments/methods', body: paymentData);
     return PaymentMethod.fromJson(jsonDecode(response.body));
   }
 
-  Future<PaymentMethod> updatePaymentMethod(int id, Map<String, dynamic> paymentData) async {
-    final response = await _makeRequest('PUT', '/payments/methods/$id', body: paymentData);
+  Future<PaymentMethod> updatePaymentMethod(
+      int id, Map<String, dynamic> paymentData) async {
+    final response =
+        await _makeRequest('PUT', '/payments/methods/$id', body: paymentData);
     return PaymentMethod.fromJson(jsonDecode(response.body));
   }
 
@@ -208,7 +218,8 @@ class ApiService {
   }
 
   Future<Payment> processPayment(Map<String, dynamic> paymentData) async {
-    final response = await _makeRequest('POST', '/payments/process', body: paymentData);
+    final response =
+        await _makeRequest('POST', '/payments/process', body: paymentData);
     return Payment.fromJson(jsonDecode(response.body));
   }
 
@@ -231,7 +242,8 @@ class ApiService {
   }
 
   Future<Review> updateReview(int id, Map<String, dynamic> reviewData) async {
-    final response = await _makeRequest('PUT', '/reviews/$id', body: reviewData);
+    final response =
+        await _makeRequest('PUT', '/reviews/$id', body: reviewData);
     return Review.fromJson(jsonDecode(response.body));
   }
 
@@ -263,19 +275,79 @@ class ApiService {
     final response = await _makeRequest('POST', '/chat/hotel/$hotelId', body: {
       'hotel_id': hotelId,
       'message': message,
+      'is_from_user': true,
+      'is_from_owner': false,
     });
     return ChatMessage.fromJson(jsonDecode(response.body));
   }
 
   Future<ChatMessage> ownerReply(int hotelId, String message) async {
-    final response = await _makeRequest('POST', '/chat/hotel/$hotelId/owner-reply', body: {
+    final response =
+        await _makeRequest('POST', '/chat/hotel/$hotelId/owner-reply', body: {
       'hotel_id': hotelId,
       'message': message,
+      'is_from_owner': true,
+      'is_from_user': false,
     });
     return ChatMessage.fromJson(jsonDecode(response.body));
   }
 
   Future<void> deleteMessage(int messageId) async {
     await _makeRequest('DELETE', '/chat/message/$messageId');
+  }
+
+  // Owner Chat endpoints
+  Future<List<ChatConversation>> getOwnerConversations() async {
+    final response = await _makeRequest('GET', '/chat/owner/conversations');
+    final List<dynamic> data = jsonDecode(response.body);
+    return data.map((json) => ChatConversation.fromJson(json)).toList();
+  }
+
+  Future<List<ChatMessage>> getChatMessagesForOwner({
+    required int hotelId,
+    int? userId,
+  }) async {
+    final queryParams = <String, String>{};
+    if (userId != null) {
+      queryParams['user_id'] = userId.toString();
+    }
+
+    final response = await _makeRequest(
+      'GET',
+      '/chat/owner/hotel/$hotelId',
+      queryParams: queryParams,
+    );
+    final List<dynamic> data = jsonDecode(response.body);
+    return data.map((json) => ChatMessage.fromJson(json)).toList();
+  }
+
+  Future<ChatMessage> sendOwnerMessage({
+    required int hotelId,
+    int? userId,
+    required String message,
+    bool isFromOwner = true,
+  }) async {
+    final response = await _makeRequest('POST', '/chat/owner/send', body: {
+      'hotel_id': hotelId,
+      if (userId != null) 'user_id': userId,
+      'message': message,
+      'is_from_owner': isFromOwner,
+      'is_from_user': !isFromOwner,
+    });
+    return ChatMessage.fromJson(jsonDecode(response.body));
+  }
+
+  Future<void> markMessagesAsRead({
+    required int hotelId,
+    int? userId,
+  }) async {
+    try {
+      await _makeRequest('POST', '/chat/mark-read', body: {
+        'hotel_id': hotelId,
+        if (userId != null) 'user_id': userId,
+      });
+    } catch (e) {
+      print('Failed to mark messages as read: $e');
+    }
   }
 }

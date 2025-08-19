@@ -3,8 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../blocs/auth/auth_bloc.dart';
-import '../screens/auth/login_screen.dart';
-import '../screens/auth/register_screen.dart';
+import '../screens/auth/auth_screen.dart';
 import '../screens/user/main_screen.dart';
 import '../screens/user/home_screen.dart';
 import '../screens/user/bookings_screen.dart';
@@ -16,6 +15,8 @@ import '../screens/user/booking_detail_screen.dart';
 import '../screens/user/review_screen.dart';
 import '../screens/owner/owner_main_screen.dart';
 import '../screens/owner/owner_hotels_screen.dart';
+import '../screens/owner/owner_chats_screen.dart';
+import '../screens/owner/owner_chat_screen.dart';
 import '../screens/owner/add_hotel_screen.dart';
 import '../screens/owner/owner_bookings_screen.dart';
 import '../screens/owner/owner_profile_screen.dart';
@@ -32,13 +33,31 @@ class AppRouter {
 
   static final GoRouter _router = GoRouter(
     navigatorKey: _rootNavigatorKey,
-    initialLocation: '/login',
+    initialLocation: '/auth',
+    errorBuilder: (context, state) => Scaffold(
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 64),
+            const SizedBox(height: 16),
+            const Text('Page not found'),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => context.go('/auth'),
+              child: const Text('Go to Login'),
+            ),
+          ],
+        ),
+      ),
+    ),
     redirect: (context, state) {
-      final authState = context.read<AuthBloc>().state;
+      final authBloc = context.read<AuthBloc>();
+      final authState = authBloc.state;
       final isAuthenticated = authState is AuthAuthenticated;
       final isOwner = isAuthenticated && authState.user.role == 'owner';
 
-      final loginRoutes = ['/login', '/register'];
+      final authRoutes = ['/auth', '/login', '/register'];
       final userRoutes = [
         '/home',
         '/bookings',
@@ -50,24 +69,28 @@ class AppRouter {
         '/owner',
         '/owner/hotels',
         '/owner/bookings',
+        '/owner/chats',
         '/owner/profile'
       ];
 
-      if (!isAuthenticated && !loginRoutes.contains(state.location)) {
-        return '/login';
+      final location = state.matchedLocation;
+
+      if (!isAuthenticated &&
+          !authRoutes.contains(location) &&
+          !location.startsWith('/auth')) {
+        return '/auth';
       }
 
       if (isAuthenticated) {
-        if (isOwner &&
-            userRoutes.any((route) => state.location.startsWith(route))) {
-          return '/owner';
+        if (isOwner && userRoutes.any((route) => location.startsWith(route))) {
+          return '/owner/hotels';
         }
         if (!isOwner &&
-            ownerRoutes.any((route) => state.location.startsWith(route))) {
+            ownerRoutes.any((route) => location.startsWith(route))) {
           return '/home';
         }
-        if (loginRoutes.contains(state.location)) {
-          return isOwner ? '/owner' : '/home';
+        if (authRoutes.contains(location)) {
+          return isOwner ? '/owner/hotels' : '/home';
         }
       }
 
@@ -75,12 +98,17 @@ class AppRouter {
     },
     routes: [
       GoRoute(
+        path: '/auth',
+        builder: (context, state) => const AuthScreen(),
+      ),
+      GoRoute(
         path: '/login',
-        builder: (context, state) => const LoginScreen(),
+        builder: (context, state) => const AuthScreen(initiallyShowLogin: true),
       ),
       GoRoute(
         path: '/register',
-        builder: (context, state) => const RegisterScreen(),
+        builder: (context, state) =>
+            const AuthScreen(initiallyShowLogin: false),
       ),
       ShellRoute(
         navigatorKey: _shellNavigatorKey,
@@ -93,7 +121,7 @@ class AppRouter {
               GoRoute(
                 path: 'hotel/:id',
                 builder: (context, state) => HotelDetailScreen(
-                  hotelId: int.parse(state.params['id']!),
+                  hotelId: int.parse(state.pathParameters['id']!),
                 ),
               ),
             ],
@@ -105,7 +133,7 @@ class AppRouter {
               GoRoute(
                 path: ':id',
                 builder: (context, state) => BookingDetailScreen(
-                  bookingId: int.parse(state.params['id']!),
+                  bookingId: int.parse(state.pathParameters['id']!),
                 ),
               ),
             ],
@@ -117,7 +145,7 @@ class AppRouter {
           GoRoute(
             path: '/chat/:hotelId',
             builder: (context, state) => ChatScreen(
-              hotelId: int.parse(state.params['hotelId']!),
+              hotelId: int.parse(state.pathParameters['hotelId']!),
             ),
           ),
           GoRoute(
@@ -127,7 +155,7 @@ class AppRouter {
           GoRoute(
             path: '/review/:bookingId',
             builder: (context, state) => ReviewScreen(
-              bookingId: int.parse(state.params['bookingId']!),
+              bookingId: int.parse(state.pathParameters['bookingId']!),
             ),
           ),
         ],
@@ -150,13 +178,13 @@ class AppRouter {
               GoRoute(
                 path: 'edit/:id',
                 builder: (context, state) => EditHotelScreen(
-                  hotelId: int.parse(state.params['id']!),
+                  hotelId: int.parse(state.pathParameters['id']!),
                 ),
               ),
               GoRoute(
                 path: ':id/reviews',
                 builder: (context, state) => HotelReviewsScreen(
-                  hotelId: int.parse(state.params['id']!),
+                  hotelId: int.parse(state.pathParameters['id']!),
                 ),
               ),
             ],
@@ -164,6 +192,17 @@ class AppRouter {
           GoRoute(
             path: '/owner/bookings',
             builder: (context, state) => const OwnerBookingsScreen(),
+          ),
+          GoRoute(
+            path: '/owner/chats',
+            builder: (context, state) => const OwnerChatsScreen(),
+          ),
+          GoRoute(
+            path: '/owner/chats/:hotelId/:userId',
+            builder: (context, state) => OwnerChatScreen(
+              hotelId: int.parse(state.pathParameters['hotelId']!),
+              userId: int.parse(state.pathParameters['userId']!),
+            ),
           ),
           GoRoute(
             path: '/owner/profile',

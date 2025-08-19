@@ -23,8 +23,8 @@ class _MainScreenState extends State<MainScreen> {
     ),
     NavigationItem(
       route: '/bookings',
-      icon: Icons.calendar_today_outlined,
-      activeIcon: Icons.calendar_today,
+      icon: Icons.book_outlined,
+      activeIcon: Icons.book,
       label: 'Bookings',
     ),
     NavigationItem(
@@ -46,24 +46,6 @@ class _MainScreenState extends State<MainScreen> {
       _selectedIndex = index;
     });
     context.go(_items[index].route);
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _updateSelectedIndex();
-  }
-
-  void _updateSelectedIndex() {
-    final String location = GoRouter.of(context).location;
-    for (int i = 0; i < _items.length; i++) {
-      if (location.startsWith(_items[i].route)) {
-        setState(() {
-          _selectedIndex = i;
-        });
-        break;
-      }
-    }
   }
 
   @override
@@ -95,10 +77,14 @@ class _MainScreenState extends State<MainScreen> {
                   onTap: () => _onItemTapped(index),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                     decoration: BoxDecoration(
-                      color: isSelected 
-                          ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
+                      color: isSelected
+                          ? Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withOpacity(0.1)
                           : Colors.transparent,
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -107,9 +93,12 @@ class _MainScreenState extends State<MainScreen> {
                       children: [
                         Icon(
                           isSelected ? item.activeIcon : item.icon,
-                          color: isSelected 
+                          color: isSelected
                               ? Theme.of(context).colorScheme.primary
-                              : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                              : Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withOpacity(0.6),
                           size: 24,
                         ),
                         const SizedBox(height: 4),
@@ -117,10 +106,14 @@ class _MainScreenState extends State<MainScreen> {
                           item.label,
                           style: GoogleFonts.poppins(
                             fontSize: 12,
-                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                            color: isSelected 
+                            fontWeight:
+                                isSelected ? FontWeight.w600 : FontWeight.w400,
+                            color: isSelected
                                 ? Theme.of(context).colorScheme.primary
-                                : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                                : Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withOpacity(0.6),
                           ),
                         ),
                       ],

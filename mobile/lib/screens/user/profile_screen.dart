@@ -62,42 +62,50 @@ class ProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Profile',
-          style: GoogleFonts.poppins(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
+    return BlocListener<AuthBloc, AuthState>(
+      listener: (context, state) {
+        // Redirect to auth screen when user logs out
+        if (state is AuthUnauthenticated || state is AuthInitial) {
+          context.go('/auth');
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(
+            'Profile',
+            style: GoogleFonts.poppins(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
           ),
+          actions: [
+            BlocBuilder<AuthBloc, AuthState>(
+              builder: (context, state) {
+                if (state is AuthAuthenticated) {
+                  return IconButton(
+                    icon: const Icon(Icons.edit_outlined),
+                    onPressed: () =>
+                        _showEditProfileBottomSheet(context, state.user),
+                  );
+                }
+                return const SizedBox.shrink();
+              },
+            ),
+          ],
         ),
-        actions: [
-          BlocBuilder<AuthBloc, AuthState>(
-            builder: (context, state) {
-              if (state is AuthAuthenticated) {
-                return IconButton(
-                  icon: const Icon(Icons.edit_outlined),
-                  onPressed: () =>
-                      _showEditProfileBottomSheet(context, state.user),
-                );
-              }
-              return const SizedBox.shrink();
-            },
-          ),
-        ],
-      ),
-      body: BlocBuilder<AuthBloc, AuthState>(
-        builder: (context, state) {
-          if (state is AuthAuthenticated) {
-            return _buildProfileContent(context, state.user);
-          } else if (state is AuthLoading) {
-            return const Center(child: CircularProgressIndicator());
-          } else {
-            return const Center(
-              child: Text('Please login to view profile'),
-            );
-          }
-        },
+        body: BlocBuilder<AuthBloc, AuthState>(
+          builder: (context, state) {
+            if (state is AuthAuthenticated) {
+              return _buildProfileContent(context, state.user);
+            } else if (state is AuthLoading) {
+              return const Center(child: CircularProgressIndicator());
+            } else {
+              return const Center(
+                child: Text('Please login to view profile'),
+              );
+            }
+          },
+        ),
       ),
     );
   }

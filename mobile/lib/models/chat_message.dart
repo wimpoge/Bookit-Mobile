@@ -1,77 +1,106 @@
-import 'dart:convert';
+import 'package:equatable/equatable.dart';
 
-class ChatMessage {
+class ChatMessage extends Equatable {
   final int id;
-  final int userId;
   final int hotelId;
+  final int? userId;
   final String message;
+  final bool isFromOwner;
   final bool isFromUser;
   final bool isAiResponse;
+  final bool isRead;
   final DateTime createdAt;
+  final DateTime updatedAt;
 
-  ChatMessage({
+  const ChatMessage({
     required this.id,
-    required this.userId,
     required this.hotelId,
+    this.userId,
     required this.message,
-    required this.isFromUser,
-    required this.isAiResponse,
+    this.isFromOwner = false,
+    bool? isFromUser,
+    this.isAiResponse = false,
+    this.isRead = false,
     required this.createdAt,
-  });
+    required this.updatedAt,
+  }) : isFromUser = isFromUser ?? !isFromOwner;
 
   factory ChatMessage.fromJson(Map<String, dynamic> json) {
+    final isFromOwner = json['is_from_owner'] ?? false;
+    final isFromUser = json['is_from_user'] ?? !isFromOwner;
+
     return ChatMessage(
-      id: json['id'],
+      id: json['id'] ?? 0,
+      hotelId: json['hotel_id'] ?? 0,
       userId: json['user_id'],
-      hotelId: json['hotel_id'],
-      message: json['message'],
-      isFromUser: json['is_from_user'],
-      isAiResponse: json['is_ai_response'],
-      createdAt: DateTime.parse(json['created_at']),
+      message: json['message'] ?? '',
+      isFromOwner: isFromOwner,
+      isFromUser: isFromUser,
+      isAiResponse: json['is_ai_response'] ?? false,
+      isRead: json['is_read'] ?? false,
+      createdAt: DateTime.parse(
+          json['created_at'] ?? DateTime.now().toIso8601String()),
+      updatedAt: DateTime.parse(
+          json['updated_at'] ?? DateTime.now().toIso8601String()),
     );
   }
 
-  Map<String, dynamic> toMap() {
+  Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'user_id': userId,
       'hotel_id': hotelId,
+      'user_id': userId,
       'message': message,
+      'is_from_owner': isFromOwner,
       'is_from_user': isFromUser,
       'is_ai_response': isAiResponse,
+      'is_read': isRead,
       'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt.toIso8601String(),
     };
   }
 
-  String toJson() => jsonEncode(toMap());
-
   ChatMessage copyWith({
     int? id,
-    int? userId,
     int? hotelId,
+    int? userId,
     String? message,
+    bool? isFromOwner,
     bool? isFromUser,
     bool? isAiResponse,
+    bool? isRead,
     DateTime? createdAt,
+    DateTime? updatedAt,
   }) {
+    final newIsFromOwner = isFromOwner ?? this.isFromOwner;
+    final newIsFromUser =
+        isFromUser ?? (isFromOwner != null ? !newIsFromOwner : this.isFromUser);
+
     return ChatMessage(
       id: id ?? this.id,
-      userId: userId ?? this.userId,
       hotelId: hotelId ?? this.hotelId,
+      userId: userId ?? this.userId,
       message: message ?? this.message,
-      isFromUser: isFromUser ?? this.isFromUser,
+      isFromOwner: newIsFromOwner,
+      isFromUser: newIsFromUser,
       isAiResponse: isAiResponse ?? this.isAiResponse,
+      isRead: isRead ?? this.isRead,
       createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 
-  String get senderType {
-    if (isFromUser) {
-      return 'You';
-    } else if (isAiResponse) {
-      return 'AI Assistant';
-    } else {
-      return 'Hotel Staff';
-    }
-  }
+  @override
+  List<Object?> get props => [
+        id,
+        hotelId,
+        userId,
+        message,
+        isFromOwner,
+        isFromUser,
+        isAiResponse,
+        isRead,
+        createdAt,
+        updatedAt,
+      ];
 }

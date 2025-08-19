@@ -29,7 +29,9 @@ class _ReviewScreenState extends State<ReviewScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<BookingsBloc>().add(BookingDetailLoadEvent(bookingId: widget.bookingId));
+    context
+        .read<BookingsBloc>()
+        .add(BookingDetailLoadEvent(bookingId: widget.bookingId));
   }
 
   @override
@@ -70,7 +72,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
           } else if (_booking != null) {
             return _buildReviewForm();
           }
-          
+
           return const SizedBox.shrink();
         },
       ),
@@ -103,14 +105,17 @@ class _ReviewScreenState extends State<ReviewScreen> {
               message,
               style: GoogleFonts.poppins(
                 fontSize: 14,
-                color: Theme.of(context).colorScheme.onBackground.withOpacity(0.6),
+                color:
+                    Theme.of(context).colorScheme.onBackground.withOpacity(0.6),
               ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () {
-                context.read<BookingsBloc>().add(BookingDetailLoadEvent(bookingId: widget.bookingId));
+                context
+                    .read<BookingsBloc>()
+                    .add(BookingDetailLoadEvent(bookingId: widget.bookingId));
               },
               child: const Text('Retry'),
             ),
@@ -140,247 +145,236 @@ class _ReviewScreenState extends State<ReviewScreen> {
           );
         }
       },
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Hotel info card
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Theme.of(context).cardColor,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      width: 60,
-                      height: 60,
-                      color: Colors.grey[300],
-                      child: _booking!.hotel.hasImages
-                          ? Image.network(
-                              _booking!.hotel.mainImage,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Icon(Icons.hotel, color: Colors.grey[600]);
-                              },
-                            )
-                          : Icon(Icons.hotel, color: Colors.grey[600]),
+      builder: (context, state) {
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).cardColor,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _booking!.hotel.name,
-                          style: GoogleFonts.poppins(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).colorScheme.onSurface,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${_booking!.hotel.city}, ${_booking!.hotel.country}',
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.green.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            'COMPLETED',
-                            style: GoogleFonts.poppins(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.green,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            
-            const SizedBox(height: 32),
-            
-            // Rating section
-            Text(
-              'How was your stay?',
-              style: GoogleFonts.poppins(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onBackground,
-              ),
-            ),
-            
-            const SizedBox(height: 8),
-            
-            Text(
-              'Rate your overall experience',
-              style: GoogleFonts.poppins(
-                fontSize: 16,
-                color: Theme.of(context).colorScheme.onBackground.withOpacity(0.6),
-              ),
-            ),
-            
-            const SizedBox(height: 24),
-            
-            // Star rating
-            Center(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: List.generate(5, (index) {
-                  return GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _rating = index + 1;
-                      });
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      child: Icon(
-                        index < _rating ? Icons.star : Icons.star_border,
-                        size: 40,
-                        color: Colors.amber,
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        width: 60,
+                        height: 60,
+                        color: Colors.grey[300],
+                        child: _booking!.hotel.hasImages
+                            ? Image.network(
+                                _booking!.hotel.mainImage,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Icon(Icons.hotel,
+                                      color: Colors.grey[600]);
+                                },
+                              )
+                            : Icon(Icons.hotel, color: Colors.grey[600]),
                       ),
                     ),
-                  );
-                }),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _booking!.hotel.name,
+                            style: GoogleFonts.poppins(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${_booking!.hotel.city}, ${_booking!.hotel.country}',
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withOpacity(0.6),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.green.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              'COMPLETED',
+                              style: GoogleFonts.poppins(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.green,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            
-            const SizedBox(height: 16),
-            
-            // Rating description
-            Center(
-              child: Text(
-                _getRatingDescription(_rating),
+              const SizedBox(height: 32),
+              Text(
+                'How was your stay?',
+                style: GoogleFonts.poppins(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onBackground,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Rate your overall experience',
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onBackground
+                      .withOpacity(0.6),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Center(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: List.generate(5, (index) {
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _rating = index + 1;
+                        });
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        child: Icon(
+                          index < _rating ? Icons.star : Icons.star_border,
+                          size: 40,
+                          color: Colors.amber,
+                        ),
+                      ),
+                    );
+                  }),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Center(
+                child: Text(
+                  _getRatingDescription(_rating),
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 32),
+              Text(
+                'Tell us more about your experience',
                 style: GoogleFonts.poppins(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
-                  color: Theme.of(context).colorScheme.primary,
+                  color: Theme.of(context).colorScheme.onBackground,
                 ),
               ),
-            ),
-            
-            const SizedBox(height: 32),
-            
-            // Comment section
-            Text(
-              'Tell us more about your experience',
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.onBackground,
+              const SizedBox(height: 8),
+              Text(
+                'Share details about your stay to help other travelers (optional)',
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onBackground
+                      .withOpacity(0.6),
+                ),
               ),
-            ),
-            
-            const SizedBox(height: 8),
-            
-            Text(
-              'Share details about your stay to help other travelers (optional)',
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                color: Theme.of(context).colorScheme.onBackground.withOpacity(0.6),
+              const SizedBox(height: 16),
+              CustomTextField(
+                controller: _commentController,
+                hintText: 'Write your review here...',
+                maxLines: 6,
+                validator: null,
               ),
-            ),
-            
-            const SizedBox(height: 16),
-            
-            CustomTextField(
-              controller: _commentController,
-              hintText: 'Write your review here...',
-              maxLines: 6,
-              validator: null,
-            ),
-            
-            const SizedBox(height: 32),
-            
-            // Quick comment suggestions
-            Text(
-              'Quick Comments',
-              style: GoogleFonts.poppins(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.onBackground,
+              const SizedBox(height: 32),
+              Text(
+                'Quick Comments',
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Theme.of(context).colorScheme.onBackground,
+                ),
               ),
-            ),
-            
-            const SizedBox(height: 12),
-            
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: _getQuickComments().map((comment) {
-                return GestureDetector(
-                  onTap: () {
-                    final currentText = _commentController.text.trim();
-                    if (currentText.isEmpty) {
-                      _commentController.text = comment;
-                    } else {
-                      _commentController.text = '$currentText $comment';
-                    }
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surface,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: _getQuickComments().map((comment) {
+                  return GestureDetector(
+                    onTap: () {
+                      final currentText = _commentController.text.trim();
+                      if (currentText.isEmpty) {
+                        _commentController.text = comment;
+                      } else {
+                        _commentController.text = '$currentText $comment';
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surface,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .outline
+                              .withOpacity(0.3),
+                        ),
+                      ),
+                      child: Text(
+                        comment,
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
                       ),
                     ),
-                    child: Text(
-                      comment,
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-            
-            const SizedBox(height: 48),
-            
-            // Submit button
-            BlocBuilder<ReviewsBloc, ReviewsState>(
-              builder: (context, state) {
-                return CustomButton(
-                  text: 'Submit Review',
-                  onPressed: _submitReview,
-                  isLoading: state is ReviewActionLoading,
-                  icon: Icons.send,
-                );
-              },
-            ),
-            
-            const SizedBox(height: 32),
-          ],
-        ),
-      ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 48),
+              BlocBuilder<ReviewsBloc, ReviewsState>(
+                builder: (context, state) {
+                  return CustomButton(
+                    text: 'Submit Review',
+                    onPressed: _submitReview,
+                    isLoading: state is ReviewActionLoading,
+                    icon: Icons.send,
+                  );
+                },
+              ),
+              const SizedBox(height: 32),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -454,15 +448,15 @@ class _ReviewScreenState extends State<ReviewScreen> {
 
   void _submitReview() {
     if (_booking == null) return;
-    
+
     final reviewData = {
       'booking_id': _booking!.id,
       'rating': _rating,
-      'comment': _commentController.text.trim().isEmpty 
-          ? null 
+      'comment': _commentController.text.trim().isEmpty
+          ? null
           : _commentController.text.trim(),
     };
-    
+
     context.read<ReviewsBloc>().add(ReviewCreateEvent(reviewData: reviewData));
   }
 }
