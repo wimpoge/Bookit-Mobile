@@ -14,6 +14,7 @@ class Hotel {
   final int totalRooms;
   final int availableRooms;
   final int ownerId;
+  final String? ownerName;
   final double? latitude;
   final double? longitude;
   final DateTime createdAt;
@@ -32,6 +33,7 @@ class Hotel {
     required this.totalRooms,
     required this.availableRooms,
     required this.ownerId,
+    this.ownerName,
     this.latitude,
     this.longitude,
     required this.createdAt,
@@ -52,6 +54,7 @@ class Hotel {
       totalRooms: json['total_rooms'],
       availableRooms: json['available_rooms'],
       ownerId: json['owner_id'],
+      ownerName: json['owner_name'],
       latitude: json['latitude']?.toDouble(),
       longitude: json['longitude']?.toDouble(),
       createdAt: DateTime.parse(json['created_at']),
@@ -73,6 +76,7 @@ class Hotel {
       'total_rooms': totalRooms,
       'available_rooms': availableRooms,
       'owner_id': ownerId,
+      'owner_name': ownerName,
       'latitude': latitude,
       'longitude': longitude,
       'created_at': createdAt.toIso8601String(),

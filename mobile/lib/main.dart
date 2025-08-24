@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import 'config/app_router.dart';
 import 'config/theme.dart';
@@ -17,11 +16,16 @@ import 'blocs/chat/chat_bloc.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  print('Main: Starting app initialization...');
   
+  // Initialize services quickly without blocking
   final prefs = await SharedPreferences.getInstance();
   final apiService = ApiService();
   final authService = AuthService(apiService, prefs);
-  
+
+  print('Main: Services initialized, starting app...');
+
   runApp(HotelBookingApp(
     authService: authService,
     apiService: apiService,
@@ -45,25 +49,33 @@ class HotelBookingApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
+        // Initialize theme first (fastest)
         BlocProvider<ThemeBloc>(
           create: (context) => ThemeBloc(prefs)..add(ThemeLoadEvent()),
         ),
+        // Initialize auth bloc but delay the auth check
         BlocProvider<AuthBloc>(
-          create: (context) => AuthBloc(authService)..add(AuthCheckStatusEvent()),
+          create: (context) => AuthBloc(authService),
         ),
+        // Lazy initialize other blocs (created only when needed)
         BlocProvider<HotelsBloc>(
+          lazy: true,
           create: (context) => HotelsBloc(apiService),
         ),
         BlocProvider<BookingsBloc>(
+          lazy: true,
           create: (context) => BookingsBloc(apiService),
         ),
         BlocProvider<PaymentsBloc>(
+          lazy: true,
           create: (context) => PaymentsBloc(apiService),
         ),
         BlocProvider<ReviewsBloc>(
+          lazy: true,
           create: (context) => ReviewsBloc(apiService),
         ),
         BlocProvider<ChatBloc>(
+          lazy: true,
           create: (context) => ChatBloc(apiService),
         ),
       ],

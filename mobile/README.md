@@ -1,16 +1,67 @@
-# hotel_booking_app
+# BookIt Mobile App
 
-A new Flutter project.
+Flutter-based hotel booking application with real-time chat and Google authentication.
 
-## Getting Started
+## Features
 
-This project is a starting point for a Flutter application.
+**For Users:**
+- Hotel search and filtering
+- Booking management with QR codes
+- Real-time chat with hotel owners
+- Review system
+- Google OAuth authentication
 
-A few resources to get you started if this is your first Flutter project:
+**For Hotel Owners:**
+- Hotel management
+- Booking oversight
+- Guest communication
+- Review responses
+- Basic analytics
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## Tech Stack
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- Flutter 3.10+ with BLoC pattern
+- Go Router navigation
+- Dio HTTP client
+- Google Sign-In
+- WebSocket communication
+- Material Design 3
+
+## Quick Start
+
+1. **Setup Flutter**
+   ```bash
+   flutter pub get
+   ```
+
+2. **Configure Google Services**
+   - Add `google-services.json` to `android/app/`
+   - Configure Google Maps API key in AndroidManifest.xml
+
+3. **Run the app**
+   ```bash
+   flutter run
+   ```
+
+## Configuration
+
+### API Endpoint
+Update in `lib/services/api_service.dart`:
+```dart
+static const String baseUrl = 'http://your-api-url.com/api';
+```
+
+### Google Services
+Required files (use templates provided):
+- `android/app/google-services.json`
+- Google Maps API key in `AndroidManifest.xml`
+
+## Build
+
+```bash
+# Debug
+flutter build apk --debug
+
+# Release
+flutter build apk --release
+```

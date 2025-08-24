@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../services/navigation_service.dart';
 
 import '../blocs/auth/auth_bloc.dart';
+import '../screens/splash_screen.dart';
 import '../screens/auth/auth_screen.dart';
 import '../screens/user/main_screen.dart';
 import '../screens/user/home_screen.dart';
@@ -13,6 +15,9 @@ import '../screens/user/profile_screen.dart';
 import '../screens/user/hotel_detail_screen.dart';
 import '../screens/user/booking_detail_screen.dart';
 import '../screens/user/review_screen.dart';
+import '../screens/user/checkout_screen.dart';
+import '../screens/user/reviews_screen.dart';
+import '../screens/user/chats_screen.dart';
 import '../screens/owner/owner_main_screen.dart';
 import '../screens/owner/owner_hotels_screen.dart';
 import '../screens/owner/owner_chats_screen.dart';
@@ -22,6 +27,14 @@ import '../screens/owner/owner_bookings_screen.dart';
 import '../screens/owner/owner_profile_screen.dart';
 import '../screens/owner/edit_hotel_screen.dart';
 import '../screens/owner/hotel_reviews_screen.dart';
+import '../screens/settings/language_settings_screen.dart';
+import '../screens/settings/help_support_screen.dart';
+import '../screens/settings/privacy_security_screen.dart';
+import '../screens/settings/about_screen.dart';
+import '../screens/settings/notifications_screen.dart';
+import '../screens/owner/analytics_reports_screen.dart';
+import '../screens/owner/owner_help_support_screen.dart';
+import '../screens/owner/owner_reviews_screen.dart';
 
 class AppRouter {
   static final GlobalKey<NavigatorState> _rootNavigatorKey =
@@ -29,11 +42,14 @@ class AppRouter {
   static final GlobalKey<NavigatorState> _shellNavigatorKey =
       GlobalKey<NavigatorState>();
 
-  static GoRouter get router => _router;
+  static GoRouter get router {
+    NavigationService.setNavigatorKey(_rootNavigatorKey);
+    return _router;
+  }
 
   static final GoRouter _router = GoRouter(
     navigatorKey: _rootNavigatorKey,
-    initialLocation: '/auth',
+    initialLocation: '/', // Changed to splash screen
     errorBuilder: (context, state) => Scaffold(
       body: Center(
         child: Column(
@@ -41,17 +57,24 @@ class AppRouter {
           children: [
             const Icon(Icons.error_outline, size: 64),
             const SizedBox(height: 16),
-            const Text('Page not found'),
+            Text('Page not found: ${state.matchedLocation}'),
+            const SizedBox(height: 8),
+            Text('Full location: ${state.fullPath}'),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: () => context.go('/auth'),
-              child: const Text('Go to Login'),
+              onPressed: () => context.go('/'),
+              child: const Text('Go to Home'),
             ),
           ],
         ),
       ),
     ),
     redirect: (context, state) {
+      // Skip redirect for splash screen
+      if (state.matchedLocation == '/') {
+        return null;
+      }
+
       final authBloc = context.read<AuthBloc>();
       final authState = authBloc.state;
       final isAuthenticated = authState is AuthAuthenticated;
@@ -61,6 +84,7 @@ class AppRouter {
       final userRoutes = [
         '/home',
         '/bookings',
+        '/chats',
         '/payment',
         '/chat',
         '/profile'
@@ -97,6 +121,11 @@ class AppRouter {
       return null;
     },
     routes: [
+      // Splash Screen
+      GoRoute(
+        path: '/',
+        builder: (context, state) => const SplashScreen(),
+      ),
       GoRoute(
         path: '/auth',
         builder: (context, state) => const AuthScreen(),
@@ -117,14 +146,12 @@ class AppRouter {
           GoRoute(
             path: '/home',
             builder: (context, state) => const HomeScreen(),
-            routes: [
-              GoRoute(
-                path: 'hotel/:id',
-                builder: (context, state) => HotelDetailScreen(
-                  hotelId: int.parse(state.pathParameters['id']!),
-                ),
-              ),
-            ],
+          ),
+          GoRoute(
+            path: '/hotel/:id',
+            builder: (context, state) => HotelDetailScreen(
+              hotelId: int.parse(state.pathParameters['id']!),
+            ),
           ),
           GoRoute(
             path: '/bookings',
@@ -139,6 +166,10 @@ class AppRouter {
             ],
           ),
           GoRoute(
+            path: '/chats',
+            builder: (context, state) => const ChatsScreen(),
+          ),
+          GoRoute(
             path: '/payment',
             builder: (context, state) => const PaymentScreen(),
           ),
@@ -146,15 +177,48 @@ class AppRouter {
             path: '/chat/:hotelId',
             builder: (context, state) => ChatScreen(
               hotelId: int.parse(state.pathParameters['hotelId']!),
+              bookingStatus: state.uri.queryParameters['bookingStatus'],
             ),
           ),
           GoRoute(
             path: '/profile',
             builder: (context, state) => const ProfileScreen(),
+            routes: [
+              GoRoute(
+                path: 'language',
+                builder: (context, state) => const LanguageSettingsScreen(),
+              ),
+              GoRoute(
+                path: 'help',
+                builder: (context, state) => const HelpSupportScreen(),
+              ),
+              GoRoute(
+                path: 'privacy',
+                builder: (context, state) => const PrivacySecurityScreen(),
+              ),
+              GoRoute(
+                path: 'about',
+                builder: (context, state) => const AboutScreen(),
+              ),
+              GoRoute(
+                path: 'notifications',
+                builder: (context, state) => const NotificationsScreen(),
+              ),
+              GoRoute(
+                path: 'reviews',
+                builder: (context, state) => const ReviewsScreen(),
+              ),
+            ],
           ),
           GoRoute(
             path: '/review/:bookingId',
             builder: (context, state) => ReviewScreen(
+              bookingId: int.parse(state.pathParameters['bookingId']!),
+            ),
+          ),
+          GoRoute(
+            path: '/checkout/:bookingId',
+            builder: (context, state) => CheckoutScreen(
               bookingId: int.parse(state.pathParameters['bookingId']!),
             ),
           ),
@@ -207,6 +271,40 @@ class AppRouter {
           GoRoute(
             path: '/owner/profile',
             builder: (context, state) => const OwnerProfileScreen(),
+            routes: [
+              GoRoute(
+                path: 'language',
+                builder: (context, state) => const LanguageSettingsScreen(),
+              ),
+              GoRoute(
+                path: 'help',
+                builder: (context, state) => const HelpSupportScreen(),
+              ),
+              GoRoute(
+                path: 'privacy',
+                builder: (context, state) => const PrivacySecurityScreen(),
+              ),
+              GoRoute(
+                path: 'about',
+                builder: (context, state) => const AboutScreen(),
+              ),
+              GoRoute(
+                path: 'notifications',
+                builder: (context, state) => const NotificationsScreen(),
+              ),
+              GoRoute(
+                path: 'owner-help',
+                builder: (context, state) => const OwnerHelpSupportScreen(),
+              ),
+            ],
+          ),
+          GoRoute(
+            path: '/owner/analytics',
+            builder: (context, state) => const AnalyticsReportsScreen(),
+          ),
+          GoRoute(
+            path: '/owner/reviews',
+            builder: (context, state) => const OwnerReviewsScreen(),
           ),
         ],
       ),

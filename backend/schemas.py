@@ -22,13 +22,16 @@ class UserResponse(UserBase):
     is_active: bool
     profile_image: Optional[str] = None
     created_at: datetime
-    
+   
     class Config:
         from_attributes = True
 
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+
+class GoogleLogin(BaseModel):
+    id_token: str
 
 class Token(BaseModel):
     access_token: str
@@ -69,8 +72,17 @@ class HotelResponse(HotelBase):
     images: List[str]
     available_rooms: int
     owner_id: int
+    owner_name: Optional[str] = None
     created_at: datetime
     
+    @property
+    def has_images(self) -> bool:
+        return bool(self.images)
+    
+    @property
+    def main_image(self) -> str:
+        return self.images[0] if self.images else ""
+   
     class Config:
         from_attributes = True
 
@@ -88,50 +100,6 @@ class BookingUpdate(BaseModel):
     check_out_date: Optional[datetime] = None
     guests: Optional[int] = None
     status: Optional[BookingStatus] = None
-
-class BookingResponse(BookingBase):
-    id: int
-    user_id: int
-    total_price: float
-    status: str
-    created_at: datetime
-    hotel: HotelResponse
-    
-    class Config:
-        from_attributes = True
-
-class PaymentMethodBase(BaseModel):
-    type: str
-    provider: str
-    account_info: dict
-
-class PaymentMethodCreate(PaymentMethodBase):
-    is_default: Optional[bool] = False
-
-class PaymentMethodResponse(PaymentMethodBase):
-    id: int
-    user_id: int
-    is_default: bool
-    created_at: datetime
-    
-    class Config:
-        from_attributes = True
-
-class PaymentCreate(BaseModel):
-    booking_id: int
-    payment_method_id: int
-    amount: float
-
-class PaymentResponse(BaseModel):
-    id: int
-    amount: float
-    currency: str
-    status: str
-    transaction_id: Optional[str] = None
-    created_at: datetime
-    
-    class Config:
-        from_attributes = True
 
 class ReviewBase(BaseModel):
     rating: int
@@ -151,12 +119,66 @@ class ReviewResponse(ReviewBase):
     owner_reply: Optional[str] = None
     created_at: datetime
     user: UserResponse
-    
+   
     class Config:
         from_attributes = True
 
+class BookingResponse(BaseModel):
+    id: int
+    hotel_id: Optional[int] = None
+    check_in_date: datetime
+    check_out_date: datetime
+    guests: int
+    user_id: int
+    total_price: float
+    status: str
+    qr_code: Optional[str] = None
+    has_review: bool = False
+    created_at: datetime
+    hotel: Optional[HotelResponse] = None
+    review: Optional[ReviewResponse] = None
+   
+    class Config:
+        from_attributes = True
+
+class PaymentMethodBase(BaseModel):
+    type: str
+    provider: str
+    account_info: dict
+
+class PaymentMethodCreate(PaymentMethodBase):
+    is_default: Optional[bool] = False
+
+class PaymentMethodResponse(PaymentMethodBase):
+    id: int
+    user_id: int
+    is_default: bool
+    created_at: datetime
+   
+    class Config:
+        from_attributes = True
+
+class PaymentCreate(BaseModel):
+    booking_id: int
+    payment_method_id: int
+    amount: float
+
+class PaymentResponse(BaseModel):
+    id: int
+    amount: float
+    currency: str
+    status: str
+    transaction_id: Optional[str] = None
+    created_at: datetime
+   
+    class Config:
+        from_attributes = True
+
+
+class ChatMessageBase(BaseModel):
+    message: str
+
 class ChatMessageCreate(BaseModel):
-    hotel_id: int
     message: str
 
 class ChatMessageResponse(BaseModel):
@@ -165,8 +187,22 @@ class ChatMessageResponse(BaseModel):
     hotel_id: int
     message: str
     is_from_user: bool
+    is_from_owner: bool
     is_ai_response: bool
+    is_read: bool
     created_at: datetime
+   
+    class Config:
+        from_attributes = True
+
+class ChatConversationResponse(BaseModel):
+    hotel_id: int
+    user_id: int
+    hotel: HotelResponse
+    guest_name: str
+    last_message: ChatMessageResponse
+    unread_count: int
+    has_unread_messages: bool
     
     class Config:
         from_attributes = True

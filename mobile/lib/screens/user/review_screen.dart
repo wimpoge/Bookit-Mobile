@@ -53,7 +53,10 @@ class _ReviewScreenState extends State<ReviewScreen> {
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+          onPressed: () {
+            // Always navigate back to bookings screen
+            context.go('/bookings');
+          },
         ),
       ),
       body: BlocConsumer<BookingsBloc, BookingsState>(
@@ -128,13 +131,15 @@ class _ReviewScreenState extends State<ReviewScreen> {
   Widget _buildReviewForm() {
     return BlocConsumer<ReviewsBloc, ReviewsState>(
       listener: (context, state) {
-        if (state is ReviewActionSuccess) {
+        if (state is ReviewCreateSuccess) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(state.message),
               backgroundColor: Colors.green,
             ),
           );
+          // Reload bookings to update hasReview field
+          context.read<BookingsBloc>().add(BookingsLoadEvent());
           context.pop();
         } else if (state is ReviewsError) {
           ScaffoldMessenger.of(context).showSnackBar(

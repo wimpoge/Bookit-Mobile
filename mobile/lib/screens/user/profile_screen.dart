@@ -354,7 +354,7 @@ class ProfileScreen extends StatelessWidget {
             title: 'Notifications',
             subtitle: 'Manage your notifications',
             onTap: () {
-              // TODO: Navigate to notifications settings
+              context.go('/profile/notifications');
             },
           ),
         ]),
@@ -366,31 +366,45 @@ class ProfileScreen extends StatelessWidget {
         const SizedBox(height: 12),
         BlocBuilder<ThemeBloc, ThemeState>(
           builder: (context, themeState) {
-            return _buildSettingsGroup(context, [
-              SettingsItem(
-                icon:
-                    themeState.isDarkMode ? Icons.light_mode : Icons.dark_mode,
-                title: 'Dark Mode',
-                subtitle: themeState.isDarkMode ? 'Enabled' : 'Disabled',
-                trailing: Switch(
-                  value: themeState.isDarkMode,
-                  onChanged: (value) {
-                    context.read<ThemeBloc>().add(ThemeToggleEvent());
-                  },
-                ),
-                onTap: () {
-                  context.read<ThemeBloc>().add(ThemeToggleEvent());
-                },
-              ),
-              SettingsItem(
-                icon: Icons.language_outlined,
-                title: 'Language & Region',
-                subtitle: 'English (US)',
-                onTap: () {
-                  // TODO: Navigate to language settings
-                },
-              ),
-            ]);
+            return BlocBuilder<AuthBloc, AuthState>(
+              builder: (context, authState) {
+                String languageSubtitle = 'English (US)';
+                if (authState is AuthAuthenticated) {
+                  final user = authState.user;
+                  if (user.language == 'id') {
+                    languageSubtitle = 'Bahasa Indonesia';
+                  } else {
+                    languageSubtitle = 'English (US)';
+                  }
+                }
+                
+                return _buildSettingsGroup(context, [
+                  SettingsItem(
+                    icon:
+                        themeState.isDarkMode ? Icons.light_mode : Icons.dark_mode,
+                    title: 'Dark Mode',
+                    subtitle: themeState.isDarkMode ? 'Enabled' : 'Disabled',
+                    trailing: Switch(
+                      value: themeState.isDarkMode,
+                      onChanged: (value) {
+                        context.read<ThemeBloc>().add(ThemeToggleEvent());
+                      },
+                    ),
+                    onTap: () {
+                      context.read<ThemeBloc>().add(ThemeToggleEvent());
+                    },
+                  ),
+                  SettingsItem(
+                    icon: Icons.language_outlined,
+                    title: 'Language & Region',
+                    subtitle: languageSubtitle,
+                    onTap: () {
+                      context.go('/profile/language');
+                    },
+                  ),
+                ]);
+              },
+            );
           },
         ),
 
@@ -405,7 +419,7 @@ class ProfileScreen extends StatelessWidget {
             title: 'Help & Support',
             subtitle: 'Get help and contact us',
             onTap: () {
-              // TODO: Navigate to help
+              context.go('/profile/help');
             },
           ),
           SettingsItem(
@@ -413,7 +427,7 @@ class ProfileScreen extends StatelessWidget {
             title: 'Privacy & Security',
             subtitle: 'Control your privacy settings',
             onTap: () {
-              // TODO: Navigate to privacy settings
+              context.go('/profile/privacy');
             },
           ),
           SettingsItem(
@@ -421,7 +435,7 @@ class ProfileScreen extends StatelessWidget {
             title: 'About',
             subtitle: 'App version and information',
             onTap: () {
-              // TODO: Show about dialog
+              context.go('/profile/about');
             },
           ),
         ]),

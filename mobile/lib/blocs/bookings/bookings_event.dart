@@ -68,3 +68,39 @@ class BookingCheckOutEvent extends BookingsEvent {
   @override
   List<Object> get props => [bookingId];
 }
+
+class BookingConfirmEvent extends BookingsEvent {
+  final int bookingId;
+
+  const BookingConfirmEvent({required this.bookingId});
+
+  @override
+  List<Object> get props => [bookingId];
+}
+
+class BookingRejectEvent extends BookingsEvent {
+  final int bookingId;
+
+  const BookingRejectEvent({required this.bookingId});
+
+  @override
+  List<Object> get props => [bookingId];
+}
+
+class BookingSelfCheckInEvent extends BookingsEvent {
+  final int bookingId;
+
+  const BookingSelfCheckInEvent({required this.bookingId});
+
+  @override
+  List<Object> get props => [bookingId];
+}
+
+class BookingSelfCheckOutEvent extends BookingsEvent {
+  final int bookingId;
+
+  const BookingSelfCheckOutEvent({required this.bookingId});
+
+  @override
+  List<Object> get props => [bookingId];
+}

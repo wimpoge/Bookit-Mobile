@@ -20,9 +20,10 @@ class HotelsBloc extends Bloc<HotelsEvent, HotelsState> {
     on<OwnerHotelsLoadEvent>(_onLoadOwnerHotels);
   }
 
-  Future<void> _onLoadHotels(HotelsLoadEvent event, Emitter<HotelsState> emit) async {
+  Future<void> _onLoadHotels(
+      HotelsLoadEvent event, Emitter<HotelsState> emit) async {
     emit(HotelsLoading());
-    
+
     try {
       final hotels = await _apiService.getHotels(
         skip: event.skip,
@@ -34,9 +35,10 @@ class HotelsBloc extends Bloc<HotelsEvent, HotelsState> {
     }
   }
 
-  Future<void> _onSearchHotels(HotelsSearchEvent event, Emitter<HotelsState> emit) async {
+  Future<void> _onSearchHotels(
+      HotelsSearchEvent event, Emitter<HotelsState> emit) async {
     emit(HotelsLoading());
-    
+
     try {
       final hotels = await _apiService.searchHotels(event.query);
       emit(HotelsLoaded(hotels));
@@ -45,25 +47,31 @@ class HotelsBloc extends Bloc<HotelsEvent, HotelsState> {
     }
   }
 
-  Future<void> _onFilterHotels(HotelsFilterEvent event, Emitter<HotelsState> emit) async {
+  Future<void> _onFilterHotels(
+      HotelsFilterEvent event, Emitter<HotelsState> emit) async {
     emit(HotelsLoading());
-    
+
     try {
+      final amenitiesString = event.amenities?.join(',');
+
       final hotels = await _apiService.getHotels(
         city: event.city,
         minPrice: event.minPrice,
         maxPrice: event.maxPrice,
-        amenities: event.amenities?.join(','),
+        amenities: amenitiesString,
+        amenitiesMatchAll: event.amenitiesMatchAll ?? false,
       );
+
       emit(HotelsLoaded(hotels));
     } catch (e) {
       emit(HotelsError(e.toString()));
     }
   }
 
-  Future<void> _onLoadHotelDetail(HotelDetailLoadEvent event, Emitter<HotelsState> emit) async {
+  Future<void> _onLoadHotelDetail(
+      HotelDetailLoadEvent event, Emitter<HotelsState> emit) async {
     emit(HotelDetailLoading());
-    
+
     try {
       final hotel = await _apiService.getHotel(event.hotelId);
       emit(HotelDetailLoaded(hotel));
@@ -72,9 +80,10 @@ class HotelsBloc extends Bloc<HotelsEvent, HotelsState> {
     }
   }
 
-  Future<void> _onCreateHotel(HotelCreateEvent event, Emitter<HotelsState> emit) async {
+  Future<void> _onCreateHotel(
+      HotelCreateEvent event, Emitter<HotelsState> emit) async {
     emit(HotelActionLoading());
-    
+
     try {
       final hotel = await _apiService.createHotel(event.hotelData);
       emit(HotelActionSuccess('Hotel created successfully'));
@@ -83,20 +92,23 @@ class HotelsBloc extends Bloc<HotelsEvent, HotelsState> {
     }
   }
 
-  Future<void> _onUpdateHotel(HotelUpdateEvent event, Emitter<HotelsState> emit) async {
+  Future<void> _onUpdateHotel(
+      HotelUpdateEvent event, Emitter<HotelsState> emit) async {
     emit(HotelActionLoading());
-    
+
     try {
-      final hotel = await _apiService.updateHotel(event.hotelId, event.hotelData);
+      final hotel =
+          await _apiService.updateHotel(event.hotelId, event.hotelData);
       emit(HotelActionSuccess('Hotel updated successfully'));
     } catch (e) {
       emit(HotelsError(e.toString()));
     }
   }
 
-  Future<void> _onDeleteHotel(HotelDeleteEvent event, Emitter<HotelsState> emit) async {
+  Future<void> _onDeleteHotel(
+      HotelDeleteEvent event, Emitter<HotelsState> emit) async {
     emit(HotelActionLoading());
-    
+
     try {
       await _apiService.deleteHotel(event.hotelId);
       emit(HotelActionSuccess('Hotel deleted successfully'));
@@ -105,9 +117,10 @@ class HotelsBloc extends Bloc<HotelsEvent, HotelsState> {
     }
   }
 
-  Future<void> _onLoadOwnerHotels(OwnerHotelsLoadEvent event, Emitter<HotelsState> emit) async {
+  Future<void> _onLoadOwnerHotels(
+      OwnerHotelsLoadEvent event, Emitter<HotelsState> emit) async {
     emit(HotelsLoading());
-    
+
     try {
       final hotels = await _apiService.getOwnerHotels();
       emit(HotelsLoaded(hotels));

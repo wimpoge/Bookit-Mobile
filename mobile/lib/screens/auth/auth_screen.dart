@@ -19,27 +19,10 @@ class AuthScreen extends StatefulWidget {
   State<AuthScreen> createState() => _AuthScreenState();
 }
 
-class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
+class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateMixin {
   late PageController _pageController;
   late AnimationController _tabAnimationController;
   late Animation<double> _tabSlideAnimation;
-
-  // Login form controllers
-  final _loginFormKey = GlobalKey<FormState>();
-  final _loginEmailController = TextEditingController();
-  final _loginPasswordController = TextEditingController();
-  bool _obscureLoginPassword = true;
-
-  // Register form controllers
-  final _registerFormKey = GlobalKey<FormState>();
-  final _registerEmailController = TextEditingController();
-  final _registerUsernameController = TextEditingController();
-  final _registerFullNameController = TextEditingController();
-  final _registerPhoneController = TextEditingController();
-  final _registerPasswordController = TextEditingController();
-  final _registerConfirmPasswordController = TextEditingController();
-  bool _obscureRegisterPassword = true;
-  bool _obscureRegisterConfirmPassword = true;
 
   int _currentIndex = 0;
 
@@ -50,7 +33,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
     _pageController = PageController(initialPage: _currentIndex);
 
     _tabAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 250),
       vsync: this,
     );
 
@@ -59,7 +42,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
       end: 1.0,
     ).animate(CurvedAnimation(
       parent: _tabAnimationController,
-      curve: Curves.easeInOut,
+      curve: Curves.fastOutSlowIn,
     ));
 
     if (!widget.initiallyShowLogin) {
@@ -71,62 +54,26 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
   void dispose() {
     _pageController.dispose();
     _tabAnimationController.dispose();
-
-    _loginEmailController.dispose();
-    _loginPasswordController.dispose();
-
-    _registerEmailController.dispose();
-    _registerUsernameController.dispose();
-    _registerFullNameController.dispose();
-    _registerPhoneController.dispose();
-    _registerPasswordController.dispose();
-    _registerConfirmPasswordController.dispose();
-
     super.dispose();
   }
 
   void _switchToLogin() {
     if (_currentIndex != 0) {
-      setState(() => _currentIndex = 0);
       _pageController.animateToPage(
         0,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.fastOutSlowIn,
       );
-      _tabAnimationController.reverse();
     }
   }
 
   void _switchToRegister() {
     if (_currentIndex != 1) {
-      setState(() => _currentIndex = 1);
       _pageController.animateToPage(
         1,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.fastOutSlowIn,
       );
-      _tabAnimationController.forward();
-    }
-  }
-
-  void _handleLogin() {
-    if (_loginFormKey.currentState?.validate() ?? false) {
-      context.read<AuthBloc>().add(AuthLoginEvent(
-            email: _loginEmailController.text.trim(),
-            password: _loginPasswordController.text,
-          ));
-    }
-  }
-
-  void _handleRegister() {
-    if (_registerFormKey.currentState?.validate() ?? false) {
-      context.read<AuthBloc>().add(AuthRegisterEvent(userData: {
-            'email': _registerEmailController.text.trim(),
-            'username': _registerUsernameController.text.trim(),
-            'full_name': _registerFullNameController.text.trim(),
-            'phone': _registerPhoneController.text.trim(),
-            'password': _registerPasswordController.text,
-          }));
     }
   }
 
@@ -205,133 +152,30 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
 
                     const SizedBox(height: 48),
 
-                    // Animated Tab buttons
-                    Container(
-                      height: 50,
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).cardColor,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Stack(
-                        children: [
-                          // Animated background
-                          AnimatedBuilder(
-                            animation: _tabSlideAnimation,
-                            builder: (context, child) {
-                              final containerWidth =
-                                  (MediaQuery.of(context).size.width - 48) /
-                                      2; // Account for padding
-                              return Positioned(
-                                left: _tabSlideAnimation.value * containerWidth,
-                                top: 2,
-                                bottom: 2,
-                                width: containerWidth,
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color:
-                                        Theme.of(context).colorScheme.primary,
-                                    borderRadius: BorderRadius.only(
-                                      topLeft: Radius.circular(
-                                          _currentIndex == 0 ? 10 : 2),
-                                      bottomLeft: Radius.circular(
-                                          _currentIndex == 0 ? 10 : 2),
-                                      topRight: Radius.circular(
-                                          _currentIndex == 1 ? 10 : 2),
-                                      bottomRight: Radius.circular(
-                                          _currentIndex == 1 ? 10 : 2),
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                          // Tab buttons
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Material(
-                                  color: Colors.transparent,
-                                  child: InkWell(
-                                    onTap: _switchToLogin,
-                                    borderRadius: const BorderRadius.only(
-                                      topLeft: Radius.circular(12),
-                                      bottomLeft: Radius.circular(12),
-                                    ),
-                                    child: Container(
-                                      height: 50,
-                                      child: Center(
-                                        child: Text(
-                                          'Sign In',
-                                          style: GoogleFonts.poppins(
-                                            fontWeight: FontWeight.w600,
-                                            color: _currentIndex == 0
-                                                ? Theme.of(context)
-                                                    .colorScheme
-                                                    .onPrimary
-                                                : Theme.of(context)
-                                                    .colorScheme
-                                                    .onSurface,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              Expanded(
-                                child: Material(
-                                  color: Colors.transparent,
-                                  child: InkWell(
-                                    onTap: _switchToRegister,
-                                    borderRadius: const BorderRadius.only(
-                                      topRight: Radius.circular(12),
-                                      bottomRight: Radius.circular(12),
-                                    ),
-                                    child: Container(
-                                      height: 50,
-                                      child: Center(
-                                        child: Text(
-                                          'Sign Up',
-                                          style: GoogleFonts.poppins(
-                                            fontWeight: FontWeight.w600,
-                                            color: _currentIndex == 1
-                                                ? Theme.of(context)
-                                                    .colorScheme
-                                                    .onPrimary
-                                                : Theme.of(context)
-                                                    .colorScheme
-                                                    .onSurface,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
+                    // Optimized Tab Selector
+                    _buildTabSelector(),
                   ],
                 ),
               ),
 
-              // PageView for forms
+              // PageView with form widgets
               Expanded(
                 child: PageView(
                   controller: _pageController,
                   onPageChanged: (index) {
-                    setState(() => _currentIndex = index);
-                    if (index == 0) {
-                      _tabAnimationController.reverse();
-                    } else {
-                      _tabAnimationController.forward();
+                    if (_currentIndex != index) {
+                      setState(() => _currentIndex = index);
+                      if (index == 0) {
+                        _tabAnimationController.reverse();
+                      } else {
+                        _tabAnimationController.forward();
+                      }
                     }
                   },
-                  children: [
-                    _buildLoginForm(),
-                    _buildRegisterForm(),
+                  physics: const ClampingScrollPhysics(),
+                  children: const [
+                    LoginFormWidget(),
+                    RegisterFormWidget(),
                   ],
                 ),
               ),
@@ -342,11 +186,152 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildLoginForm() {
+  Widget _buildTabSelector() {
+    return Container(
+      height: 50,
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          // Smooth animated background
+          AnimatedBuilder(
+            animation: _tabSlideAnimation,
+            builder: (context, child) {
+              final containerWidth = (MediaQuery.of(context).size.width - 48) / 2;
+              return AnimatedPositioned(
+                duration: Duration.zero, // Use animation controller instead
+                left: _tabSlideAnimation.value * containerWidth,
+                top: 3,
+                bottom: 3,
+                width: containerWidth - 3,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primary,
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+          // Tab buttons
+          Row(
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  onTap: _switchToLogin,
+                  child: Container(
+                    height: 50,
+                    decoration: BoxDecoration(
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(12),
+                        bottomLeft: Radius.circular(12),
+                      ),
+                    ),
+                    child: Center(
+                      child: AnimatedDefaultTextStyle(
+                        duration: const Duration(milliseconds: 200),
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w600,
+                          color: _currentIndex == 0
+                              ? Theme.of(context).colorScheme.onPrimary
+                              : Theme.of(context).colorScheme.onSurface,
+                        ),
+                        child: const Text('Sign In'),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: GestureDetector(
+                  onTap: _switchToRegister,
+                  child: Container(
+                    height: 50,
+                    decoration: BoxDecoration(
+                      borderRadius: const BorderRadius.only(
+                        topRight: Radius.circular(12),
+                        bottomRight: Radius.circular(12),
+                      ),
+                    ),
+                    child: Center(
+                      child: AnimatedDefaultTextStyle(
+                        duration: const Duration(milliseconds: 200),
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w600,
+                          color: _currentIndex == 1
+                              ? Theme.of(context).colorScheme.onPrimary
+                              : Theme.of(context).colorScheme.onSurface,
+                        ),
+                        child: const Text('Sign Up'),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// Extracted Login Form Widget
+class LoginFormWidget extends StatefulWidget {
+  const LoginFormWidget({Key? key}) : super(key: key);
+
+  @override
+  State<LoginFormWidget> createState() => _LoginFormWidgetState();
+}
+
+class _LoginFormWidgetState extends State<LoginFormWidget> with AutomaticKeepAliveClientMixin {
+  final _formKey = GlobalKey<FormState>();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _obscurePassword = true;
+
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  void _handleLogin() {
+    if (_formKey.currentState?.validate() ?? false) {
+      context.read<AuthBloc>().add(AuthLoginEvent(
+            email: _emailController.text.trim(),
+            password: _passwordController.text,
+          ));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context); // Required for AutomaticKeepAliveClientMixin
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Form(
-        key: _loginFormKey,
+        key: _formKey,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -361,7 +346,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
             ),
             const SizedBox(height: 8),
             CustomTextField(
-              controller: _loginEmailController,
+              controller: _emailController,
               hintText: 'Enter your email',
               keyboardType: TextInputType.emailAddress,
               prefixIcon: const Icon(Icons.email_outlined),
@@ -388,19 +373,17 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
             ),
             const SizedBox(height: 8),
             CustomTextField(
-              controller: _loginPasswordController,
+              controller: _passwordController,
               hintText: 'Enter your password',
-              obscureText: _obscureLoginPassword,
+              obscureText: _obscurePassword,
               prefixIcon: const Icon(Icons.lock_outline),
               suffixIcon: IconButton(
                 icon: Icon(
-                  _obscureLoginPassword
-                      ? Icons.visibility_off
-                      : Icons.visibility,
+                  _obscurePassword ? Icons.visibility_off : Icons.visibility,
                 ),
                 onPressed: () {
                   setState(() {
-                    _obscureLoginPassword = !_obscureLoginPassword;
+                    _obscurePassword = !_obscurePassword;
                   });
                 },
               ),
@@ -456,11 +439,113 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildRegisterForm() {
+  Widget _buildSocialLoginSection() {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(child: Divider(color: Theme.of(context).dividerColor)),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                'Or continue with',
+                style: GoogleFonts.poppins(
+                  color: Theme.of(context).colorScheme.secondary,
+                ),
+              ),
+            ),
+            Expanded(child: Divider(color: Theme.of(context).dividerColor)),
+          ],
+        ),
+        const SizedBox(height: 24),
+        Row(
+          children: [
+            Expanded(
+              child: BlocBuilder<AuthBloc, AuthState>(
+                builder: (context, state) {
+                  return OutlinedButton.icon(
+                    onPressed: state is AuthLoading ? null : () {
+                      context.read<AuthBloc>().add(AuthGoogleLoginEvent());
+                    },
+                    icon: const Icon(Icons.g_mobiledata, size: 24),
+                    label: const Text('Google'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () {},
+                icon: const Icon(Icons.facebook, size: 24),
+                label: const Text('Facebook'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+// Extracted Register Form Widget
+class RegisterFormWidget extends StatefulWidget {
+  const RegisterFormWidget({Key? key}) : super(key: key);
+
+  @override
+  State<RegisterFormWidget> createState() => _RegisterFormWidgetState();
+}
+
+class _RegisterFormWidgetState extends State<RegisterFormWidget> with AutomaticKeepAliveClientMixin {
+  final _formKey = GlobalKey<FormState>();
+  final _emailController = TextEditingController();
+  final _usernameController = TextEditingController();
+  final _fullNameController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
+
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _usernameController.dispose();
+    _fullNameController.dispose();
+    _phoneController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
+
+  void _handleRegister() {
+    if (_formKey.currentState?.validate() ?? false) {
+      context.read<AuthBloc>().add(AuthRegisterEvent(userData: {
+            'email': _emailController.text.trim(),
+            'username': _usernameController.text.trim(),
+            'full_name': _fullNameController.text.trim(),
+            'phone': _phoneController.text.trim(),
+            'password': _passwordController.text,
+          }));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context); // Required for AutomaticKeepAliveClientMixin
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Form(
-        key: _registerFormKey,
+        key: _formKey,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -475,7 +560,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
             ),
             const SizedBox(height: 8),
             CustomTextField(
-              controller: _registerEmailController,
+              controller: _emailController,
               hintText: 'Enter your email',
               keyboardType: TextInputType.emailAddress,
               prefixIcon: const Icon(Icons.email_outlined),
@@ -502,7 +587,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
             ),
             const SizedBox(height: 8),
             CustomTextField(
-              controller: _registerUsernameController,
+              controller: _usernameController,
               hintText: 'Enter your username',
               prefixIcon: const Icon(Icons.person_outline),
               validator: (value) {
@@ -527,7 +612,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
             ),
             const SizedBox(height: 8),
             CustomTextField(
-              controller: _registerFullNameController,
+              controller: _fullNameController,
               hintText: 'Enter your full name',
               prefixIcon: const Icon(Icons.badge_outlined),
               validator: (value) {
@@ -549,7 +634,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
             ),
             const SizedBox(height: 8),
             CustomTextField(
-              controller: _registerPhoneController,
+              controller: _phoneController,
               hintText: 'Enter your phone number',
               keyboardType: TextInputType.phone,
               prefixIcon: const Icon(Icons.phone_outlined),
@@ -572,19 +657,17 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
             ),
             const SizedBox(height: 8),
             CustomTextField(
-              controller: _registerPasswordController,
+              controller: _passwordController,
               hintText: 'Enter your password',
-              obscureText: _obscureRegisterPassword,
+              obscureText: _obscurePassword,
               prefixIcon: const Icon(Icons.lock_outline),
               suffixIcon: IconButton(
                 icon: Icon(
-                  _obscureRegisterPassword
-                      ? Icons.visibility_off
-                      : Icons.visibility,
+                  _obscurePassword ? Icons.visibility_off : Icons.visibility,
                 ),
                 onPressed: () {
                   setState(() {
-                    _obscureRegisterPassword = !_obscureRegisterPassword;
+                    _obscurePassword = !_obscurePassword;
                   });
                 },
               ),
@@ -610,20 +693,19 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
             ),
             const SizedBox(height: 8),
             CustomTextField(
-              controller: _registerConfirmPasswordController,
+              controller: _confirmPasswordController,
               hintText: 'Confirm your password',
-              obscureText: _obscureRegisterConfirmPassword,
+              obscureText: _obscureConfirmPassword,
               prefixIcon: const Icon(Icons.lock_outline),
               suffixIcon: IconButton(
                 icon: Icon(
-                  _obscureRegisterConfirmPassword
+                  _obscureConfirmPassword
                       ? Icons.visibility_off
                       : Icons.visibility,
                 ),
                 onPressed: () {
                   setState(() {
-                    _obscureRegisterConfirmPassword =
-                        !_obscureRegisterConfirmPassword;
+                    _obscureConfirmPassword = !_obscureConfirmPassword;
                   });
                 },
               ),
@@ -631,7 +713,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                 if (value?.isEmpty ?? true) {
                   return 'Please fill out this field.';
                 }
-                if (value != _registerPasswordController.text) {
+                if (value != _passwordController.text) {
                   return 'Passwords do not match';
                 }
                 return null;
@@ -667,7 +749,6 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
   Widget _buildSocialLoginSection() {
     return Column(
       children: [
-        // Or continue with
         Row(
           children: [
             Expanded(child: Divider(color: Theme.of(context).dividerColor)),
@@ -683,30 +764,29 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
             Expanded(child: Divider(color: Theme.of(context).dividerColor)),
           ],
         ),
-
         const SizedBox(height: 24),
-
-        // Social buttons
         Row(
           children: [
             Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () {
-                  // TODO: Implement Google sign in/up
+              child: BlocBuilder<AuthBloc, AuthState>(
+                builder: (context, state) {
+                  return OutlinedButton.icon(
+                    onPressed: state is AuthLoading ? null : () {
+                      context.read<AuthBloc>().add(AuthGoogleLoginEvent());
+                    },
+                    icon: const Icon(Icons.g_mobiledata, size: 24),
+                    label: const Text('Google'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                  );
                 },
-                icon: const Icon(Icons.g_mobiledata, size: 24),
-                label: const Text('Google'),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
               ),
             ),
             const SizedBox(width: 16),
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: () {
-                  // TODO: Implement Facebook sign in/up
-                },
+                onPressed: () {},
                 icon: const Icon(Icons.facebook, size: 24),
                 label: const Text('Facebook'),
                 style: OutlinedButton.styleFrom(

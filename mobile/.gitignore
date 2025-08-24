@@ -100,3 +100,36 @@ coverage/
 # Temporary files
 *.tmp
 *.temp
+
+# Google services & Firebase
+google-services.json
+GoogleService-Info.plist
+firebase_app_id_file.json
+firebase_options.dart
+
+# API Keys and secrets
+**/lib/**/api_keys.dart
+**/lib/**/secrets.dart
+**/.env.dart
+
+# iOS Keychain & Android Keystore
+ios/Runner/GoogleService-Info.plist
+android/app/google-services.json
+android/key.properties
+android/keystore/*
+*.jks
+*.keystore
+
+# Local properties
+android/local.properties
+ios/Flutter/flutter_export_environment.sh
+
+# Build artifacts
+**/build/
+**/out/
+
+# Platform specific
+windows/flutter/ephemeral/
+
+# Generated icons
+android/app/src/main/res/mipmap-*/ic_launcher.png

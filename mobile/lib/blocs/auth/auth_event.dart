@@ -41,3 +41,5 @@ class AuthUpdateUserEvent extends AuthEvent {
   @override
   List<Object> get props => [userData];
 }
+
+class AuthGoogleLoginEvent extends AuthEvent {}

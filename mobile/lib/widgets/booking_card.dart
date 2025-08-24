@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../models/booking.dart';
 import '../screens/user/bookings_screen.dart';
+import '../screens/user/qr_code_screen.dart';
+import '../blocs/bookings/bookings_bloc.dart';
 
 class BookingCard extends StatelessWidget {
   final Booking booking;
@@ -218,38 +222,128 @@ class BookingCard extends StatelessWidget {
   }
 
   Widget _buildActionButtons(BuildContext context) {
-    if (type == BookingListType.upcoming && onCancel != null) {
+    if (type == BookingListType.current) {
+      // Debug QR code
+      print('Booking ${booking.id}: status=${booking.status}, qrCode=${booking.qrCode}');
+      
       return Row(
         children: [
-          OutlinedButton(
-            onPressed: onCancel,
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              minimumSize: Size.zero,
-              side: BorderSide(color: Colors.red.withOpacity(0.6)),
-            ),
-            child: Text(
-              'Cancel',
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Colors.red,
+          // Check-in button for confirmed bookings
+          if (booking.canCheckIn) ...[
+            ElevatedButton(
+              onPressed: () {
+                context.read<BookingsBloc>().add(BookingSelfCheckInEvent(bookingId: booking.id));
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                minimumSize: Size.zero,
+              ),
+              child: Text(
+                'Check In',
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: 8),
+            const SizedBox(width: 6),
+          ],
+          // QR Code button - show for all bookings with QR code (debug: show regardless)
+          if (booking.qrCode != null) ...[
+            ElevatedButton(
+              onPressed: () {
+                print('QR Code button pressed: ${booking.qrCode}');
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => QrCodeScreen(
+                      qrData: booking.qrCode!,
+                      bookingId: booking.id.toString(),
+                      hotelName: booking.hotel.name,
+                    ),
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                minimumSize: Size.zero,
+              ),
+              child: Text(
+                'QR Code',
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+          ],
+          // Check-out button for checked-in bookings
+          if (booking.canCheckOut) ...[
+            ElevatedButton(
+              onPressed: () {
+                context.go('/checkout/${booking.id}');
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                minimumSize: Size.zero,
+              ),
+              child: Text(
+                'Check Out',
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+          ],
+          // Cancel button (only if cancellation is still possible)
+          if (onCancel != null && booking.canCancel) ...[
+            OutlinedButton(
+              onPressed: onCancel,
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                minimumSize: Size.zero,
+                side: BorderSide(color: Colors.red.withOpacity(0.6)),
+              ),
+              child: Text(
+                'Cancel',
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.red,
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+          ],
+          // View button
           ElevatedButton(
             onPressed: onTap,
             style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               minimumSize: Size.zero,
             ),
-            child: Text(
-              'View',
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'View',
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                const Icon(
+                  Icons.arrow_forward_ios,
+                  size: 12,
+                ),
+              ],
             ),
           ),
         ],
@@ -278,12 +372,22 @@ class BookingCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               minimumSize: Size.zero,
             ),
-            child: Text(
-              'View',
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'View',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                const Icon(
+                  Icons.arrow_forward_ios,
+                  size: 12,
+                ),
+              ],
             ),
           ),
         ],
@@ -295,12 +399,22 @@ class BookingCard extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           minimumSize: Size.zero,
         ),
-        child: Text(
-          'View Details',
-          style: GoogleFonts.poppins(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-          ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'View Details',
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(width: 4),
+            const Icon(
+              Icons.arrow_forward_ios,
+              size: 12,
+            ),
+          ],
         ),
       );
     }

@@ -7,7 +7,6 @@ class ChatMessage extends Equatable {
   final String message;
   final bool isFromOwner;
   final bool isFromUser;
-  final bool isAiResponse;
   final bool isRead;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -19,7 +18,6 @@ class ChatMessage extends Equatable {
     required this.message,
     this.isFromOwner = false,
     bool? isFromUser,
-    this.isAiResponse = false,
     this.isRead = false,
     required this.createdAt,
     required this.updatedAt,
@@ -36,7 +34,6 @@ class ChatMessage extends Equatable {
       message: json['message'] ?? '',
       isFromOwner: isFromOwner,
       isFromUser: isFromUser,
-      isAiResponse: json['is_ai_response'] ?? false,
       isRead: json['is_read'] ?? false,
       createdAt: DateTime.parse(
           json['created_at'] ?? DateTime.now().toIso8601String()),
@@ -53,7 +50,6 @@ class ChatMessage extends Equatable {
       'message': message,
       'is_from_owner': isFromOwner,
       'is_from_user': isFromUser,
-      'is_ai_response': isAiResponse,
       'is_read': isRead,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
@@ -67,7 +63,6 @@ class ChatMessage extends Equatable {
     String? message,
     bool? isFromOwner,
     bool? isFromUser,
-    bool? isAiResponse,
     bool? isRead,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -83,7 +78,6 @@ class ChatMessage extends Equatable {
       message: message ?? this.message,
       isFromOwner: newIsFromOwner,
       isFromUser: newIsFromUser,
-      isAiResponse: isAiResponse ?? this.isAiResponse,
       isRead: isRead ?? this.isRead,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -98,7 +92,6 @@ class ChatMessage extends Equatable {
         message,
         isFromOwner,
         isFromUser,
-        isAiResponse,
         isRead,
         createdAt,
         updatedAt,

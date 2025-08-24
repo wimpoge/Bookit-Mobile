@@ -7,6 +7,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../blocs/bookings/bookings_bloc.dart';
 import '../../models/booking.dart';
+import '../../models/review.dart';
 import '../../widgets/custom_button.dart';
 
 class BookingDetailScreen extends StatefulWidget {
@@ -41,7 +42,10 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+          onPressed: () {
+            // Always navigate back to bookings screen
+            context.go('/bookings');
+          },
         ),
         actions: [
           PopupMenuButton<String>(
@@ -97,6 +101,9 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                 backgroundColor: Colors.red,
               ),
             );
+          } else if (state is BookingsLoaded) {
+            // Refresh booking detail when main bookings are loaded (e.g., after review submission)
+            context.read<BookingsBloc>().add(BookingDetailLoadEvent(bookingId: widget.bookingId));
           }
         },
         builder: (context, state) {
@@ -386,6 +393,12 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                   const SizedBox(height: 24),
                 ],
                 
+                // User's Review (if exists)
+                if (booking.review != null) ...[
+                  _buildReviewSection(booking.review!),
+                  const SizedBox(height: 24),
+                ],
+                
                 // Action buttons
                 _buildActionButtons(booking),
               ],
@@ -456,6 +469,135 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
     );
   }
 
+  Widget _buildReviewSection(Review review) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.rate_review,
+                color: Theme.of(context).colorScheme.primary,
+                size: 24,
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Your Review',
+                style: GoogleFonts.poppins(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          
+          // Star rating
+          Row(
+            children: [
+              Row(
+                children: List.generate(5, (index) {
+                  return Icon(
+                    index < review.rating ? Icons.star : Icons.star_border,
+                    color: Colors.amber,
+                    size: 20,
+                  );
+                }),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '${review.rating}/5',
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+            ],
+          ),
+          
+          if (review.comment != null && review.comment!.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(
+              review.comment!,
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                color: Theme.of(context).colorScheme.onSurface,
+                height: 1.5,
+              ),
+            ),
+          ],
+          
+          const SizedBox(height: 12),
+          Text(
+            'Reviewed on ${DateFormat('MMM dd, yyyy').format(review.createdAt)}',
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+            ),
+          ),
+          
+          // Owner reply if exists
+          if (review.ownerReply != null && review.ownerReply!.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.business,
+                        color: Theme.of(context).colorScheme.primary,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Hotel Response',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    review.ownerReply!,
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      color: Theme.of(context).colorScheme.onSurface,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _buildActionButtons(Booking booking) {
     if (booking.canCancel) {
       return Column(
@@ -480,6 +622,24 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
           ),
         ],
       );
+    } else if (booking.canCheckOut) {
+      return Column(
+        children: [
+          CustomButton(
+            text: 'Check Out & Review',
+            onPressed: () => context.go('/checkout/${booking.id}'),
+            icon: Icons.logout,
+            backgroundColor: Colors.green,
+          ),
+          const SizedBox(height: 12),
+          CustomButton(
+            text: 'Chat with Hotel',
+            onPressed: () => context.go('/chat/${booking.hotel.id}'),
+            isOutlined: true,
+            icon: Icons.chat_bubble_outline,
+          ),
+        ],
+      );
     } else if (booking.canReview) {
       return Column(
         children: [
@@ -491,7 +651,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
           const SizedBox(height: 12),
           CustomButton(
             text: 'Book Again',
-            onPressed: () => context.go('/home/hotel/${booking.hotel.id}'),
+            onPressed: () => context.go('/hotel/${booking.hotel.id}'),
             isOutlined: true,
             icon: Icons.refresh,
           ),
@@ -502,7 +662,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
         children: [
           CustomButton(
             text: 'View Hotel',
-            onPressed: () => context.go('/home/hotel/${booking.hotel.id}'),
+            onPressed: () => context.go('/hotel/${booking.hotel.id}'),
             icon: Icons.hotel,
           ),
           const SizedBox(height: 12),

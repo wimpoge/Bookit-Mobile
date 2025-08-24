@@ -1,12 +1,17 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../blocs/hotels/hotels_bloc.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_text_field.dart';
+import '../../widgets/location_picker.dart';
+import '../../utils/navigation_utils.dart';
+import '../../services/api_service.dart';
 
 class AddHotelScreen extends StatefulWidget {
   const AddHotelScreen({Key? key}) : super(key: key);
@@ -17,6 +22,7 @@ class AddHotelScreen extends StatefulWidget {
 
 class _AddHotelScreenState extends State<AddHotelScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _scrollController = ScrollController();
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _addressController = TextEditingController();
@@ -24,11 +30,25 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
   final _countryController = TextEditingController();
   final _priceController = TextEditingController();
   final _totalRoomsController = TextEditingController();
-  final _latitudeController = TextEditingController();
-  final _longitudeController = TextEditingController();
+
+  // GlobalKeys for scrolling to validation errors
+  final _nameFieldKey = GlobalKey();
+  final _addressFieldKey = GlobalKey();
+  final _cityFieldKey = GlobalKey();
+  final _countryFieldKey = GlobalKey();
+  final _priceFieldKey = GlobalKey();
+  final _totalRoomsFieldKey = GlobalKey();
+  final _locationFieldKey = GlobalKey();
 
   List<String> _selectedAmenities = [];
-  List<String> _hotelImages = [];
+  List<File> _selectedImageFiles = [];
+  List<String> _uploadedImageUrls = [];
+  bool _isUploadingImages = false;
+  
+  // Location data
+  double? _selectedLatitude;
+  double? _selectedLongitude;
+  String _selectedAddress = '';
 
   final List<String> _availableAmenities = [
     'WiFi',
@@ -48,8 +68,40 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
     'Breakfast',
   ];
 
+  void _scrollToFirstError() {
+    // Find the first field with an error and scroll to it
+    if (_nameController.text.trim().isEmpty) {
+      _scrollToWidget(_nameFieldKey);
+    } else if (_addressController.text.trim().isEmpty) {
+      _scrollToWidget(_addressFieldKey);
+    } else if (_cityController.text.trim().isEmpty) {
+      _scrollToWidget(_cityFieldKey);
+    } else if (_countryController.text.trim().isEmpty) {
+      _scrollToWidget(_countryFieldKey);
+    } else if (_priceController.text.trim().isEmpty) {
+      _scrollToWidget(_priceFieldKey);
+    } else if (_totalRoomsController.text.trim().isEmpty) {
+      _scrollToWidget(_totalRoomsFieldKey);
+    } else if (_selectedLatitude == null || _selectedLongitude == null) {
+      _scrollToWidget(_locationFieldKey);
+    }
+  }
+
+  void _scrollToWidget(GlobalKey key) {
+    final context = key.currentContext;
+    if (context != null) {
+      Scrollable.ensureVisible(
+        context,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOut,
+        alignment: 0.1, // Show the field near the top
+      );
+    }
+  }
+
   @override
   void dispose() {
+    _scrollController.dispose();
     _nameController.dispose();
     _descriptionController.dispose();
     _addressController.dispose();
@@ -57,8 +109,6 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
     _countryController.dispose();
     _priceController.dispose();
     _totalRoomsController.dispose();
-    _latitudeController.dispose();
-    _longitudeController.dispose();
     super.dispose();
   }
 
@@ -73,10 +123,7 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
             fontWeight: FontWeight.bold,
           ),
         ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
+        leading: NavigationUtils.backButton(context),
       ),
       body: BlocConsumer<HotelsBloc, HotelsState>(
         listener: (context, state) {
@@ -99,6 +146,7 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
         },
         builder: (context, state) {
           return SingleChildScrollView(
+            controller: _scrollController,
             padding: const EdgeInsets.all(20),
             child: Form(
               key: _formKey,
@@ -106,7 +154,30 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Hotel Images Section
-                  _buildSectionTitle('Hotel Images'),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildSectionTitle('Hotel Images'),
+                      Text(
+                        '${_selectedImageFiles.length}/10',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: _selectedImageFiles.length >= 10 
+                              ? Colors.red 
+                              : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Upload up to 10 high-quality photos of your hotel',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                    ),
+                  ),
                   const SizedBox(height: 12),
                   _buildImageUploadSection(),
                   
@@ -122,6 +193,7 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
                     hint: 'Enter hotel name',
                     icon: Icons.hotel,
                     isRequired: true,
+                    fieldKey: _nameFieldKey,
                   ),
                   
                   const SizedBox(height: 16),
@@ -146,6 +218,7 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
                     hint: 'Street address',
                     icon: Icons.location_on,
                     isRequired: true,
+                    fieldKey: _addressFieldKey,
                   ),
                   
                   const SizedBox(height: 16),
@@ -159,6 +232,7 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
                           hint: 'City name',
                           icon: Icons.location_city,
                           isRequired: true,
+                          fieldKey: _cityFieldKey,
                         ),
                       ),
                       const SizedBox(width: 16),
@@ -169,6 +243,7 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
                           hint: 'Country name',
                           icon: Icons.flag,
                           isRequired: true,
+                          fieldKey: _countryFieldKey,
                         ),
                       ),
                     ],
@@ -176,29 +251,8 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
                   
                   const SizedBox(height: 16),
                   
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildTextField(
-                          controller: _latitudeController,
-                          label: 'Latitude (Optional)',
-                          hint: '0.0000',
-                          icon: Icons.my_location,
-                          keyboardType: TextInputType.number,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: _buildTextField(
-                          controller: _longitudeController,
-                          label: 'Longitude (Optional)',
-                          hint: '0.0000',
-                          icon: Icons.my_location,
-                          keyboardType: TextInputType.number,
-                        ),
-                      ),
-                    ],
-                  ),
+                  // GPS Location Section
+                  _buildLocationSection(),
                   
                   const SizedBox(height: 32),
                   
@@ -216,6 +270,7 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
                           icon: Icons.attach_money,
                           keyboardType: TextInputType.number,
                           isRequired: true,
+                          fieldKey: _priceFieldKey,
                         ),
                       ),
                       const SizedBox(width: 16),
@@ -227,6 +282,7 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
                           icon: Icons.meeting_room,
                           keyboardType: TextInputType.number,
                           isRequired: true,
+                          fieldKey: _totalRoomsFieldKey,
                         ),
                       ),
                     ],
@@ -253,9 +309,9 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
                   BlocBuilder<HotelsBloc, HotelsState>(
                     builder: (context, state) {
                       return CustomButton(
-                        text: 'Add Hotel',
+                        text: _isUploadingImages ? 'Uploading Images...' : 'Add Hotel',
                         onPressed: _submitHotel,
-                        isLoading: state is HotelActionLoading,
+                        isLoading: state is HotelActionLoading || _isUploadingImages,
                         icon: Icons.add,
                       );
                     },
@@ -290,8 +346,10 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
     int maxLines = 1,
     TextInputType? keyboardType,
     bool isRequired = false,
+    GlobalKey? fieldKey,
   }) {
     return Column(
+      key: fieldKey,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
@@ -347,7 +405,7 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
       ),
       child: Column(
         children: [
-          if (_hotelImages.isEmpty) ...[
+          if (_selectedImageFiles.isEmpty) ...[
             Icon(
               Icons.add_photo_alternate,
               size: 48,
@@ -379,18 +437,22 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
                 crossAxisCount: 3,
                 crossAxisSpacing: 8,
                 mainAxisSpacing: 8,
+                childAspectRatio: 1.0, // Ensure square aspect ratio
               ),
-              itemCount: _hotelImages.length + 1,
+              itemCount: _selectedImageFiles.length + 1,
               itemBuilder: (context, index) {
-                if (index == _hotelImages.length) {
+                if (index == _selectedImageFiles.length) {
                   return _buildAddImageButton();
                 }
-                return _buildImageItem(_hotelImages[index], index);
+                return AspectRatio(
+                  aspectRatio: 1.0,
+                  child: _buildImageItem(_selectedImageFiles[index], index),
+                );
               },
             ),
           ],
           
-          if (_hotelImages.isEmpty) ...[
+          if (_selectedImageFiles.isEmpty) ...[
             const SizedBox(height: 16),
             OutlinedButton.icon(
               onPressed: _pickImages,
@@ -423,7 +485,7 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
     );
   }
 
-  Widget _buildImageItem(String imagePath, int index) {
+  Widget _buildImageItem(File imageFile, int index) {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
@@ -433,20 +495,31 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
-            child: Container(
-              width: double.infinity,
-              height: double.infinity,
-              color: Colors.grey[300],
-              child: const Icon(Icons.image, size: 32),
+            child: GestureDetector(
+              onTap: () => _showImageZoom(imageFile),
+              child: SizedBox.expand(
+                child: _buildSafeImageWidget(imageFile),
+              ),
             ),
           ),
+          // Zoom indicator
+          const Positioned(
+            top: 4,
+            left: 4,
+            child: Icon(
+              Icons.zoom_in,
+              color: Colors.white,
+              size: 16,
+            ),
+          ),
+          // Remove button
           Positioned(
             top: 4,
             right: 4,
             child: GestureDetector(
               onTap: () {
                 setState(() {
-                  _hotelImages.removeAt(index);
+                  _selectedImageFiles.removeAt(index);
                 });
               },
               child: Container(
@@ -465,6 +538,197 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildSafeImageWidget(File imageFile) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Ensure we have valid constraints
+        if (constraints.maxWidth == double.infinity || constraints.maxHeight == double.infinity) {
+          return Container(
+            width: 100,
+            height: 100,
+            color: Colors.grey[300],
+            child: const Icon(Icons.image, size: 32, color: Colors.grey),
+          );
+        }
+        
+        return Container(
+          width: constraints.maxWidth,
+          height: constraints.maxHeight,
+          decoration: BoxDecoration(
+            color: Colors.grey[300],
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: FutureBuilder<bool>(
+            future: imageFile.exists(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                );
+              }
+              
+              if (snapshot.hasError || !snapshot.hasData || !snapshot.data!) {
+                return const Center(
+                  child: Icon(Icons.error, size: 32, color: Colors.grey),
+                );
+              }
+              
+              return Image.file(
+                imageFile,
+                fit: BoxFit.cover,
+                cacheWidth: constraints.maxWidth.round(),
+                cacheHeight: constraints.maxHeight.round(),
+                errorBuilder: (context, error, stackTrace) {
+                  print('Image error: $error');
+                  return Container(
+                    color: Colors.grey[300],
+                    child: const Center(
+                      child: Icon(Icons.broken_image, size: 32, color: Colors.grey),
+                    ),
+                  );
+                },
+                frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+                  if (frame == null) {
+                    return Container(
+                      color: Colors.grey[300],
+                      child: const Center(
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    );
+                  }
+                  return child;
+                },
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildLocationSection() {
+    return Column(
+      key: _locationFieldKey,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              'GPS Location',
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).colorScheme.onBackground,
+              ),
+            ),
+            Text(
+              ' (Optional)',
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.w400,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (_selectedAddress.isNotEmpty) ...[
+                Row(
+                  children: [
+                    Icon(
+                      Icons.location_on,
+                      size: 16,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _selectedAddress,
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Lat: ${_selectedLatitude?.toStringAsFixed(6) ?? 'N/A'}, '
+                  'Lng: ${_selectedLongitude?.toStringAsFixed(6) ?? 'N/A'}',
+                  style: GoogleFonts.poppins(
+                    fontSize: 10,
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _selectLocation,
+                      icon: const Icon(Icons.map, size: 18),
+                      label: Text(
+                        _selectedAddress.isEmpty ? 'Select Location' : 'Change Location',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (_selectedAddress.isNotEmpty) ...[
+                    const SizedBox(width: 12),
+                    OutlinedButton.icon(
+                      onPressed: _clearLocation,
+                      icon: const Icon(Icons.clear, size: 16),
+                      label: Text(
+                        'Clear',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.red,
+                        side: const BorderSide(color: Colors.red),
+                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -515,52 +779,241 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
 
   void _pickImages() async {
     try {
+      // Check if we're at the limit
+      if (_selectedImageFiles.length >= 10) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Maximum 10 images allowed'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+      
       final ImagePicker picker = ImagePicker();
       final List<XFile> images = await picker.pickMultiImage();
       
-      setState(() {
-        _hotelImages.addAll(images.map((image) => image.path));
-      });
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${images.length} image(s) selected'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      if (images.isNotEmpty) {
+        // Check total count after adding new images
+        int totalAfterAdd = _selectedImageFiles.length + images.length;
+        List<XFile> imagesToAdd = images;
+        
+        if (totalAfterAdd > 10) {
+          int allowedCount = 10 - _selectedImageFiles.length;
+          imagesToAdd = images.take(allowedCount).toList();
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Only $allowedCount images added (maximum 10 total)'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+        
+        setState(() {
+          _selectedImageFiles.addAll(
+            imagesToAdd.map((image) => File(image.path))
+          );
+        });
+        
+        if (totalAfterAdd <= 10) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${imagesToAdd.length} image(s) selected'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Image picker not fully implemented'),
-          backgroundColor: Colors.orange,
+        SnackBar(
+          content: Text('Failed to pick images: $e'),
+          backgroundColor: Colors.red,
         ),
       );
     }
   }
 
-  void _submitHotel() {
+  void _selectLocation() async {
+    try {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => LocationPicker(
+            initialLatitude: _selectedLatitude,
+            initialLongitude: _selectedLongitude,
+            initialAddress: _selectedAddress,
+            onLocationSelected: (latitude, longitude, address) {
+              setState(() {
+                _selectedLatitude = latitude;
+                _selectedLongitude = longitude;
+                _selectedAddress = address;
+              });
+            },
+          ),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error opening location picker: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  void _clearLocation() {
+    setState(() {
+      _selectedLatitude = null;
+      _selectedLongitude = null;
+      _selectedAddress = '';
+    });
+  }
+
+  void _showImageZoom(File imageFile) {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext context) {
+        return Dialog.fullscreen(
+          backgroundColor: Colors.black,
+          child: SafeArea(
+            child: Stack(
+              children: [
+                Center(
+                  child: InteractiveViewer(
+                    panEnabled: true,
+                    minScale: 0.5,
+                    maxScale: 4.0,
+                    child: FutureBuilder<bool>(
+                      future: imageFile.exists(),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return const Center(
+                            child: CircularProgressIndicator(color: Colors.white),
+                          );
+                        }
+                        
+                        if (snapshot.hasError || !snapshot.hasData || !snapshot.data!) {
+                          return const Center(
+                            child: Icon(
+                              Icons.error,
+                              size: 64,
+                              color: Colors.white,
+                            ),
+                          );
+                        }
+                        
+                        return Image.file(
+                          imageFile,
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) {
+                            return const Center(
+                              child: Icon(
+                                Icons.broken_image,
+                                size: 64,
+                                color: Colors.white,
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 16,
+                  right: 16,
+                  child: Material(
+                    color: Colors.transparent,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black54,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: IconButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                        },
+                        icon: const Icon(
+                          Icons.close,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                        tooltip: 'Close',
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _submitHotel() async {
     if (_formKey.currentState?.validate() ?? false) {
-      final hotelData = {
-        'name': _nameController.text.trim(),
-        'description': _descriptionController.text.trim().isEmpty 
-            ? null 
-            : _descriptionController.text.trim(),
-        'address': _addressController.text.trim(),
-        'city': _cityController.text.trim(),
-        'country': _countryController.text.trim(),
-        'price_per_night': double.parse(_priceController.text),
-        'amenities': _selectedAmenities,
-        'total_rooms': int.parse(_totalRoomsController.text),
-        'latitude': _latitudeController.text.trim().isEmpty 
-            ? null 
-            : double.parse(_latitudeController.text),
-        'longitude': _longitudeController.text.trim().isEmpty 
-            ? null 
-            : double.parse(_longitudeController.text),
-        'images': _hotelImages,
-      };
+      setState(() {
+        _isUploadingImages = true;
+      });
       
-      context.read<HotelsBloc>().add(HotelCreateEvent(hotelData: hotelData));
+      try {
+        // Upload images first if any are selected
+        List<String> imageUrls = [];
+        if (_selectedImageFiles.isNotEmpty) {
+          final apiService = ApiService();
+          
+          // Get and set the authentication token
+          final prefs = await SharedPreferences.getInstance();
+          final token = prefs.getString('auth_token');
+          if (token != null) {
+            apiService.setToken(token);
+          } else {
+            throw Exception('Authentication token not found. Please log in again.');
+          }
+          
+          imageUrls = await apiService.uploadHotelImages(_selectedImageFiles);
+          
+          setState(() {
+            _uploadedImageUrls = imageUrls;
+          });
+        }
+        
+        final hotelData = {
+          'name': _nameController.text.trim(),
+          'description': _descriptionController.text.trim().isEmpty 
+              ? null 
+              : _descriptionController.text.trim(),
+          'address': _addressController.text.trim(),
+          'city': _cityController.text.trim(),
+          'country': _countryController.text.trim(),
+          'price_per_night': double.parse(_priceController.text),
+          'amenities': _selectedAmenities,
+          'total_rooms': int.parse(_totalRoomsController.text),
+          'latitude': _selectedLatitude,
+          'longitude': _selectedLongitude,
+          'images': imageUrls,
+        };
+        
+        context.read<HotelsBloc>().add(HotelCreateEvent(hotelData: hotelData));
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to upload images: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      } finally {
+        setState(() {
+          _isUploadingImages = false;
+        });
+      }
+    } else {
+      // Validation failed, scroll to first error
+      _scrollToFirstError();
     }
   }
 }

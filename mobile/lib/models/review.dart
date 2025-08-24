@@ -3,25 +3,29 @@ import 'user.dart';
 
 class Review {
   final int id;
-  final int userId;
-  final int hotelId;
+  final int? userId;
+  final int? hotelId;
   final int bookingId;
   final int rating;
   final String? comment;
   final String? ownerReply;
   final DateTime createdAt;
-  final User user;
+  final User? user;
+  final ReviewHotel? hotel;
+  final bool? needsReply;
 
   Review({
     required this.id,
-    required this.userId,
-    required this.hotelId,
+    this.userId,
+    this.hotelId,
     required this.bookingId,
     required this.rating,
     this.comment,
     this.ownerReply,
     required this.createdAt,
-    required this.user,
+    this.user,
+    this.hotel,
+    this.needsReply,
   });
 
   factory Review.fromJson(Map<String, dynamic> json) {
@@ -34,7 +38,9 @@ class Review {
       comment: json['comment'],
       ownerReply: json['owner_reply'],
       createdAt: DateTime.parse(json['created_at']),
-      user: User.fromJson(json['user']),
+      user: json['user'] != null ? User.fromJson(json['user']) : null,
+      hotel: json['hotel'] != null ? ReviewHotel.fromJson(json['hotel']) : null,
+      needsReply: json['needs_reply'],
     );
   }
 
@@ -48,7 +54,9 @@ class Review {
       'comment': comment,
       'owner_reply': ownerReply,
       'created_at': createdAt.toIso8601String(),
-      'user': user.toMap(),
+      'user': user?.toMap(),
+      'hotel': hotel?.toMap(),
+      'needs_reply': needsReply,
     };
   }
 
@@ -64,6 +72,8 @@ class Review {
     String? ownerReply,
     DateTime? createdAt,
     User? user,
+    ReviewHotel? hotel,
+    bool? needsReply,
   }) {
     return Review(
       id: id ?? this.id,
@@ -75,6 +85,8 @@ class Review {
       ownerReply: ownerReply ?? this.ownerReply,
       createdAt: createdAt ?? this.createdAt,
       user: user ?? this.user,
+      hotel: hotel ?? this.hotel,
+      needsReply: needsReply ?? this.needsReply,
     );
   }
 
@@ -95,5 +107,37 @@ class Review {
       default:
         return 'Unknown';
     }
+  }
+}
+
+class ReviewHotel {
+  final int id;
+  final String name;
+  final String location;
+  final String? imageUrl;
+
+  ReviewHotel({
+    required this.id,
+    required this.name,
+    required this.location,
+    this.imageUrl,
+  });
+
+  factory ReviewHotel.fromJson(Map<String, dynamic> json) {
+    return ReviewHotel(
+      id: json['id'],
+      name: json['name'],
+      location: json['location'],
+      imageUrl: json['image_url'],
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'location': location,
+      'image_url': imageUrl,
+    };
   }
 }

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
 
 import '../../blocs/bookings/bookings_bloc.dart';
 import '../../models/booking.dart';
@@ -15,14 +14,23 @@ class BookingsScreen extends StatefulWidget {
   State<BookingsScreen> createState() => _BookingsScreenState();
 }
 
-class _BookingsScreenState extends State<BookingsScreen> with TickerProviderStateMixin {
+class _BookingsScreenState extends State<BookingsScreen> with TickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   late TabController _tabController;
+  static int _savedTabIndex = 0; // Static variable to remember tab index
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 3, vsync: this, initialIndex: _savedTabIndex);
+    _tabController.addListener(_onTabChanged);
     context.read<BookingsBloc>().add(BookingsLoadEvent());
+  }
+
+  void _onTabChanged() {
+    if (_tabController.indexIsChanging) {
+      _savedTabIndex = _tabController.index;
+      print('BookingsScreen: Tab changed to index $_savedTabIndex');
+    }
   }
 
   @override
@@ -32,7 +40,11 @@ class _BookingsScreenState extends State<BookingsScreen> with TickerProviderStat
   }
 
   @override
+  bool get wantKeepAlive => true;
+
+  @override
   Widget build(BuildContext context) {
+    super.build(context); // Required for AutomaticKeepAliveClientMixin
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -45,7 +57,7 @@ class _BookingsScreenState extends State<BookingsScreen> with TickerProviderStat
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
-            Tab(text: 'Upcoming'),
+            Tab(text: 'Current'),
             Tab(text: 'Past'),
             Tab(text: 'Cancelled'),
           ],
@@ -141,14 +153,14 @@ class _BookingsScreenState extends State<BookingsScreen> with TickerProviderStat
   }
 
   Widget _buildBookingTabs(List<Booking> bookings) {
-    final upcomingBookings = bookings.where((b) => b.isUpcoming).toList();
+    final currentBookings = bookings.where((b) => b.isCurrent).toList();
     final pastBookings = bookings.where((b) => b.isPast).toList();
     final cancelledBookings = bookings.where((b) => b.status == BookingStatus.cancelled).toList();
 
     return TabBarView(
       controller: _tabController,
       children: [
-        _buildBookingsList(upcomingBookings, BookingListType.upcoming),
+        _buildBookingsList(currentBookings, BookingListType.current),
         _buildBookingsList(pastBookings, BookingListType.past),
         _buildBookingsList(cancelledBookings, BookingListType.cancelled),
       ],
@@ -173,8 +185,11 @@ class _BookingsScreenState extends State<BookingsScreen> with TickerProviderStat
           return BookingCard(
             booking: booking,
             type: type,
-            onTap: () => context.go('/bookings/${booking.id}'),
-            onCancel: type == BookingListType.upcoming && booking.canCancel
+            onTap: () {
+              // Navigate to booking detail and ensure current tab is preserved
+              context.go('/bookings/${booking.id}');
+            },
+            onCancel: type == BookingListType.current && booking.canCancel
                 ? () => _showCancelDialog(booking)
                 : null,
             onReview: type == BookingListType.past && booking.canReview
@@ -192,10 +207,10 @@ class _BookingsScreenState extends State<BookingsScreen> with TickerProviderStat
     IconData icon;
 
     switch (type) {
-      case BookingListType.upcoming:
-        title = 'No upcoming bookings';
-        subtitle = 'Book your next stay to see it here';
-        icon = Icons.calendar_today_outlined;
+      case BookingListType.current:
+        title = 'No current bookings';
+        subtitle = 'Your active stays will appear here';
+        icon = Icons.hotel;
         break;
       case BookingListType.past:
         title = 'No past bookings';
@@ -238,7 +253,7 @@ class _BookingsScreenState extends State<BookingsScreen> with TickerProviderStat
               ),
               textAlign: TextAlign.center,
             ),
-            if (type == BookingListType.upcoming) ...[
+            if (type == BookingListType.current) ...[
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: () => context.go('/home'),
@@ -293,7 +308,7 @@ class _BookingsScreenState extends State<BookingsScreen> with TickerProviderStat
 }
 
 enum BookingListType {
-  upcoming,
+  current,
   past,
   cancelled,
 }

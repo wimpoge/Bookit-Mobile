@@ -9,6 +9,7 @@ import '../../blocs/reviews/reviews_bloc.dart';
 import '../../models/hotel.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/booking_bottom_sheet.dart';
+import '../../services/api_service.dart';
 
 class HotelDetailScreen extends StatefulWidget {
   final int hotelId;
@@ -63,8 +64,7 @@ class _HotelDetailScreenState extends State<HotelDetailScreen> {
         } else if (state is HotelDetailLoaded) {
           return Scaffold(
             body: _buildHotelDetail(state.hotel),
-            bottomSheet: _buildBottomSheet(
-                state.hotel), // ✅ Move bottomSheet to Scaffold level
+            bottomSheet: _buildBottomSheet(state.hotel),
           );
         } else if (state is HotelsError) {
           return Scaffold(
@@ -110,7 +110,6 @@ class _HotelDetailScreenState extends State<HotelDetailScreen> {
     );
   }
 
-  // ✅ Extract bottomSheet to separate method
   Widget _buildBottomSheet(Hotel hotel) {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -152,18 +151,53 @@ class _HotelDetailScreenState extends State<HotelDetailScreen> {
                         },
                         itemCount: hotel.images.length,
                         itemBuilder: (context, index) {
-                          return CachedNetworkImage(
-                            imageUrl: hotel.images[index],
-                            fit: BoxFit.cover,
-                            placeholder: (context, url) => Container(
-                              color: Colors.grey[300],
-                              child: const Center(
-                                  child: CircularProgressIndicator()),
-                            ),
-                            errorWidget: (context, url, error) => Container(
-                              color: Colors.grey[300],
-                              child: Icon(Icons.hotel,
-                                  size: 64, color: Colors.grey[600]),
+                          return GestureDetector(
+                            onTap: () => _showImageZoom(hotel.images, index),
+                            child: Container(
+                              width: double.infinity,
+                              height: double.infinity,
+                              child: Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  CachedNetworkImage(
+                                    imageUrl: _getFullImageUrl(hotel.images[index]),
+                                    fit: BoxFit.cover,
+                                    width: double.infinity,
+                                    height: double.infinity,
+                                    placeholder: (context, url) => Container(
+                                      color: Colors.grey[300],
+                                      child: const Center(
+                                        child: CircularProgressIndicator(strokeWidth: 2),
+                                      ),
+                                    ),
+                                    errorWidget: (context, url, error) => Container(
+                                      color: Colors.grey[300],
+                                      child: Icon(
+                                        Icons.broken_image,
+                                        size: 64, 
+                                        color: Colors.grey[600]
+                                      ),
+                                    ),
+                                  ),
+                                  // Zoom indicator
+                                  Positioned(
+                                    top: 8,
+                                    right: 8,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: BoxDecoration(
+                                        color: Colors.black54,
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: const Icon(
+                                        Icons.zoom_in,
+                                        color: Colors.white,
+                                        size: 16,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           );
                         },
@@ -206,7 +240,14 @@ class _HotelDetailScreenState extends State<HotelDetailScreen> {
             ),
             child: IconButton(
               icon: const Icon(Icons.arrow_back, color: Colors.white),
-              onPressed: () => context.pop(),
+              onPressed: () {
+                // Check if we can go back, otherwise go to home
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go('/home');
+                }
+              },
             ),
           ),
           actions: [
@@ -319,7 +360,7 @@ class _HotelDetailScreenState extends State<HotelDetailScreen> {
                       text: TextSpan(
                         children: [
                           TextSpan(
-                            text: '\${hotel.pricePerNight.toStringAsFixed(0)}',
+                            text: '\$${hotel.pricePerNight.toStringAsFixed(0)}',
                             style: GoogleFonts.poppins(
                               fontSize: 28,
                               fontWeight: FontWeight.bold,
@@ -396,44 +437,62 @@ class _HotelDetailScreenState extends State<HotelDetailScreen> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: hotel.amenities.map((amenity) {
-                      return Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.surface,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .outline
-                                .withOpacity(0.3),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              _getAmenityIcon(amenity),
-                              size: 16,
-                              color: Theme.of(context).colorScheme.primary,
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final screenWidth = constraints.maxWidth;
+                      final isTablet = screenWidth > 600;
+                      final iconSize = isTablet ? 20.0 : 16.0;
+                      final fontSize = isTablet ? 14.0 : 12.0;
+                      final spacing = isTablet ? 16.0 : 12.0;
+                      
+                      return Wrap(
+                        spacing: spacing,
+                        runSpacing: spacing,
+                        children: hotel.amenities.map((amenity) {
+                          return Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: isTablet ? 16 : 12, 
+                              vertical: isTablet ? 10 : 8
                             ),
-                            const SizedBox(width: 6),
-                            Text(
-                              amenity,
-                              style: GoogleFonts.poppins(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                                color: Theme.of(context).colorScheme.onSurface,
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.surface,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .outline
+                                    .withOpacity(0.3),
                               ),
                             ),
-                          ],
-                        ),
+                            child: IntrinsicWidth(
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    _getAmenityIcon(amenity),
+                                    size: iconSize,
+                                    color: Theme.of(context).colorScheme.primary,
+                                  ),
+                                  SizedBox(width: isTablet ? 8 : 6),
+                                  Flexible(
+                                    child: Text(
+                                      amenity,
+                                      style: GoogleFonts.poppins(
+                                        fontSize: fontSize,
+                                        fontWeight: FontWeight.w500,
+                                        color: Theme.of(context).colorScheme.onSurface,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }).toList(),
                       );
-                    }).toList(),
+                    },
                   ),
                   const SizedBox(height: 24),
                 ],
@@ -495,7 +554,7 @@ class _HotelDetailScreenState extends State<HotelDetailScreen> {
                                             .colorScheme
                                             .primary,
                                         child: Text(
-                                          review.user.fullName?[0] ?? 'U',
+                                          review.user?.fullName?[0] ?? 'U',
                                           style: GoogleFonts.poppins(
                                             color: Theme.of(context)
                                                 .colorScheme
@@ -511,7 +570,7 @@ class _HotelDetailScreenState extends State<HotelDetailScreen> {
                                               CrossAxisAlignment.start,
                                           children: [
                                             Text(
-                                              review.user.fullName ??
+                                              review.user?.fullName ??
                                                   'Anonymous',
                                               style: GoogleFonts.poppins(
                                                 fontSize: 14,
@@ -598,7 +657,7 @@ class _HotelDetailScreenState extends State<HotelDetailScreen> {
                     return const SizedBox.shrink();
                   },
                 ),
-                const SizedBox(height: 100), // ✅ Add padding for bottomSheet
+                const SizedBox(height: 100), // Add padding for bottomSheet
               ],
             ),
           ),
@@ -632,5 +691,118 @@ class _HotelDetailScreenState extends State<HotelDetailScreen> {
       default:
         return Icons.check_circle_outline;
     }
+  }
+
+  void _showImageZoom(List<String> imageUrls, int initialIndex) {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext context) {
+        return Dialog.fullscreen(
+          backgroundColor: Colors.black,
+          child: SafeArea(
+            child: Stack(
+              children: [
+                PageView.builder(
+                  controller: PageController(initialPage: initialIndex),
+                  itemCount: imageUrls.length,
+                  itemBuilder: (context, index) {
+                    return Center(
+                      child: InteractiveViewer(
+                        panEnabled: true,
+                        minScale: 0.5,
+                        maxScale: 4.0,
+                        child: Container(
+                          constraints: BoxConstraints(
+                            maxWidth: MediaQuery.of(context).size.width,
+                            maxHeight: MediaQuery.of(context).size.height,
+                          ),
+                          child: CachedNetworkImage(
+                            imageUrl: _getFullImageUrl(imageUrls[index]),
+                            fit: BoxFit.contain,
+                            placeholder: (context, url) => const Center(
+                              child: CircularProgressIndicator(color: Colors.white),
+                            ),
+                            errorWidget: (context, url, error) => const Center(
+                              child: Icon(
+                                Icons.broken_image,
+                                size: 64,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                Positioned(
+                  top: 16,
+                  right: 16,
+                  child: Material(
+                    color: Colors.transparent,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black54,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: IconButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                        },
+                        icon: const Icon(
+                          Icons.close,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                        tooltip: 'Close',
+                      ),
+                    ),
+                  ),
+                ),
+                if (imageUrls.length > 1)
+                  Positioned(
+                    bottom: 16,
+                    left: 0,
+                    right: 0,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.black54,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Text(
+                            '${initialIndex + 1} / ${imageUrls.length}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  String _getFullImageUrl(String imageUrl) {
+    if (imageUrl.startsWith('http')) {
+      return imageUrl; // Already a full URL
+    }
+    
+    // Remove leading slash if present
+    final cleanUrl = imageUrl.startsWith('/') ? imageUrl.substring(1) : imageUrl;
+    
+    // Construct full URL using the base URL from ApiService
+    return '${ApiService.baseUrl.replaceAll('/api', '')}/$cleanUrl';
   }
 }

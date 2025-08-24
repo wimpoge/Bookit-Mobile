@@ -34,16 +34,19 @@ class HotelsFilterEvent extends HotelsEvent {
   final double? minPrice;
   final double? maxPrice;
   final List<String>? amenities;
+  final bool? amenitiesMatchAll;
 
   const HotelsFilterEvent({
     this.city,
     this.minPrice,
     this.maxPrice,
     this.amenities,
+    this.amenitiesMatchAll = false,
   });
 
   @override
-  List<Object?> get props => [city, minPrice, maxPrice, amenities];
+  List<Object?> get props =>
+      [city, minPrice, maxPrice, amenities, amenitiesMatchAll];
 }
 
 class HotelDetailLoadEvent extends HotelsEvent {

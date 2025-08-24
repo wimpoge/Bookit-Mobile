@@ -31,6 +31,15 @@ class ReviewActionSuccess extends ReviewsState {
   List<Object> get props => [message];
 }
 
+class ReviewCreateSuccess extends ReviewsState {
+  final String message;
+
+  const ReviewCreateSuccess(this.message);
+
+  @override
+  List<Object> get props => [message];
+}
+
 class ReviewsError extends ReviewsState {
   final String message;
 

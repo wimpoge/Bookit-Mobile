@@ -6,6 +6,8 @@ from database import get_db
 import models
 import schemas
 from auth.auth import verify_password, get_password_hash, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
+from google.auth.transport import requests
+from google.oauth2 import id_token
 
 router = APIRouter()
 security = HTTPBearer()
@@ -97,3 +99,67 @@ def register_owner(owner: schemas.OwnerCreate, db: Session = Depends(get_db)):
     db.refresh(db_user)
     
     return db_user
+
+@router.post("/google", response_model=schemas.Token)
+def google_login(google_data: schemas.GoogleLogin, db: Session = Depends(get_db)):
+    try:
+        # Verify the Google ID token
+        idinfo = id_token.verify_oauth2_token(
+            google_data.id_token, 
+            requests.Request(),
+            audience=None  # Skip audience verification for mobile apps
+        )
+        
+        # Extract user information from the token
+        email = idinfo['email']
+        name = idinfo.get('name', '')
+        google_id = idinfo['sub']
+        
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid Google token: {str(e)}"
+        )
+    
+    # Check if user already exists
+    user = db.query(models.User).filter(models.User.email == email).first()
+    
+    if not user:
+        # Create new user with Google account
+        # Generate a username from email
+        username = email.split('@')[0]
+        # Check if username exists and append number if needed
+        base_username = username
+        counter = 1
+        while db.query(models.User).filter(models.User.username == username).first():
+            username = f"{base_username}{counter}"
+            counter += 1
+            
+        user = models.User(
+            email=email,
+            username=username,
+            full_name=name,
+            hashed_password="",  # No password for OAuth users
+            role=models.UserRole.USER,
+            is_active=True
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Inactive user"
+        )
+    
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.email}, expires_delta=access_token_expires
+    )
+    
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": user
+    }

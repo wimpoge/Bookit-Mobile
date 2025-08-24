@@ -9,6 +9,8 @@ class User {
   final String role;
   final bool isActive;
   final String? profileImage;
+  final String? language;
+  final String? region;
   final DateTime createdAt;
 
   User({
@@ -20,6 +22,8 @@ class User {
     required this.role,
     required this.isActive,
     this.profileImage,
+    this.language,
+    this.region,
     required this.createdAt,
   });
 
@@ -27,7 +31,7 @@ class User {
     if (json is String) {
       json = jsonDecode(json);
     }
-    
+
     return User(
       id: json['id'],
       email: json['email'],
@@ -37,6 +41,8 @@ class User {
       role: json['role'],
       isActive: json['is_active'],
       profileImage: json['profile_image'],
+      language: json['language'],
+      region: json['region'],
       createdAt: DateTime.parse(json['created_at']),
     );
   }
@@ -51,6 +57,8 @@ class User {
       'role': role,
       'is_active': isActive,
       'profile_image': profileImage,
+      'language': language,
+      'region': region,
       'created_at': createdAt.toIso8601String(),
     };
   }
@@ -66,6 +74,8 @@ class User {
     String? role,
     bool? isActive,
     String? profileImage,
+    String? language,
+    String? region,
     DateTime? createdAt,
   }) {
     return User(
@@ -77,6 +87,8 @@ class User {
       role: role ?? this.role,
       isActive: isActive ?? this.isActive,
       profileImage: profileImage ?? this.profileImage,
+      language: language ?? this.language,
+      region: region ?? this.region,
       createdAt: createdAt ?? this.createdAt,
     );
   }

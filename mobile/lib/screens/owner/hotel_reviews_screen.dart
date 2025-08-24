@@ -435,7 +435,7 @@ class _HotelReviewsScreenState extends State<HotelReviewsScreen> {
                 backgroundColor:
                     Theme.of(context).colorScheme.primary.withOpacity(0.1),
                 child: Text(
-                  review.user.fullName
+                  review.user?.fullName
                           ?.split(' ')
                           .map((n) => n[0])
                           .take(2)
@@ -454,7 +454,7 @@ class _HotelReviewsScreenState extends State<HotelReviewsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      review.user.fullName ?? 'Anonymous User',
+                      review.user?.fullName ?? 'Anonymous User',
                       style: GoogleFonts.poppins(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
@@ -893,7 +893,7 @@ class _HotelReviewsScreenState extends State<HotelReviewsScreen> {
                   Row(
                     children: [
                       Text(
-                        review.user.fullName ?? 'Anonymous',
+                        review.user?.fullName ?? 'Anonymous',
                         style: GoogleFonts.poppins(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,

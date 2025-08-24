@@ -20,12 +20,12 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
   final _cityController = TextEditingController();
   RangeValues _priceRange = const RangeValues(50, 500);
   List<String> _selectedAmenities = [];
+  bool _amenitiesMatchAll = false;
 
   final List<String> _availableAmenities = [
     'WiFi',
     'Pool',
     'Spa',
-    'Restaurant',
     'Bar',
     'Gym',
     'Parking',
@@ -43,12 +43,15 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
 
   void _applyFilters() {
     final filters = <String, dynamic>{
-      'city': _cityController.text.trim().isEmpty ? null : _cityController.text.trim(),
+      'city': _cityController.text.trim().isEmpty
+          ? null
+          : _cityController.text.trim(),
       'minPrice': _priceRange.start,
       'maxPrice': _priceRange.end,
       'amenities': _selectedAmenities.isEmpty ? null : _selectedAmenities,
+      'amenitiesMatchAll': _amenitiesMatchAll,
     };
-    
+
     widget.onApplyFilters(filters);
     Navigator.of(context).pop();
   }
@@ -58,6 +61,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
       _cityController.clear();
       _priceRange = const RangeValues(50, 500);
       _selectedAmenities.clear();
+      _amenitiesMatchAll = false;
     });
   }
 
@@ -74,7 +78,6 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
       ),
       child: Column(
         children: [
-          // Handle
           Container(
             margin: const EdgeInsets.only(top: 12),
             width: 40,
@@ -84,8 +87,6 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          
-          // Header
           Padding(
             padding: const EdgeInsets.all(20),
             child: Row(
@@ -113,15 +114,12 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
               ],
             ),
           ),
-          
-          // Content
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Location
                   _SectionTitle(title: 'Location'),
                   const SizedBox(height: 12),
                   CustomTextField(
@@ -129,10 +127,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                     hintText: 'Enter city name',
                     prefixIcon: const Icon(Icons.location_on_outlined),
                   ),
-                  
                   const SizedBox(height: 32),
-                  
-                  // Price Range
                   _SectionTitle(title: 'Price Range'),
                   const SizedBox(height: 12),
                   Container(
@@ -141,7 +136,10 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                       color: Theme.of(context).cardColor,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .outline
+                            .withOpacity(0.3),
                       ),
                     ),
                     child: Column(
@@ -174,7 +172,10 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                           max: 1000,
                           divisions: 100,
                           activeColor: Theme.of(context).colorScheme.primary,
-                          inactiveColor: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                          inactiveColor: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withOpacity(0.3),
                           onChanged: (values) {
                             setState(() {
                               _priceRange = values;
@@ -185,18 +186,53 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                           'per night',
                           style: GoogleFonts.poppins(
                             fontSize: 12,
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withOpacity(0.6),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  
                   const SizedBox(height: 32),
-                  
-                  // Amenities
                   _SectionTitle(title: 'Amenities'),
                   const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).cardColor,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .outline
+                            .withOpacity(0.3),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Checkbox(
+                          value: _amenitiesMatchAll,
+                          onChanged: (value) {
+                            setState(() {
+                              _amenitiesMatchAll = value ?? false;
+                            });
+                          },
+                        ),
+                        Expanded(
+                          child: Text(
+                            'Must have ALL selected amenities',
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   Wrap(
                     spacing: 12,
                     runSpacing: 12,
@@ -213,16 +249,20 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                           });
                         },
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 8),
                           decoration: BoxDecoration(
-                            color: isSelected 
+                            color: isSelected
                                 ? Theme.of(context).colorScheme.primary
                                 : Theme.of(context).cardColor,
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
-                              color: isSelected 
+                              color: isSelected
                                   ? Theme.of(context).colorScheme.primary
-                                  : Theme.of(context).colorScheme.outline.withOpacity(0.3),
+                                  : Theme.of(context)
+                                      .colorScheme
+                                      .outline
+                                      .withOpacity(0.3),
                             ),
                           ),
                           child: Text(
@@ -230,7 +270,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                             style: GoogleFonts.poppins(
                               fontSize: 14,
                               fontWeight: FontWeight.w500,
-                              color: isSelected 
+                              color: isSelected
                                   ? Theme.of(context).colorScheme.onPrimary
                                   : Theme.of(context).colorScheme.onSurface,
                             ),
@@ -239,14 +279,11 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                       );
                     }).toList(),
                   ),
-                  
                   const SizedBox(height: 32),
                 ],
               ),
             ),
           ),
-          
-          // Bottom buttons
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(

@@ -36,7 +36,7 @@ class ReviewsBloc extends Bloc<ReviewsEvent, ReviewsState> {
 
     try {
       final review = await _apiService.createReview(event.reviewData);
-      emit(ReviewActionSuccess('Review created successfully'));
+      emit(ReviewCreateSuccess('Review submitted successfully'));
     } catch (e) {
       emit(ReviewsError(e.toString()));
     }

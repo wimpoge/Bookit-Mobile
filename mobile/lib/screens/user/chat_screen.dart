@@ -4,17 +4,21 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
+import '../../blocs/auth/auth_bloc.dart';
 import '../../blocs/chat/chat_bloc.dart';
 import '../../blocs/hotels/hotels_bloc.dart';
 import '../../models/chat_message.dart';
 import '../../models/hotel.dart';
+import '../../utils/navigation_utils.dart';
 
 class ChatScreen extends StatefulWidget {
   final int hotelId;
+  final String? bookingStatus;
 
   const ChatScreen({
     Key? key,
     required this.hotelId,
+    this.bookingStatus,
   }) : super(key: key);
 
   @override
@@ -25,28 +29,79 @@ class _ChatScreenState extends State<ChatScreen> {
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
   Hotel? _hotel;
+  bool _isTyping = false;
 
   @override
   void initState() {
     super.initState();
     context.read<ChatBloc>().add(ChatLoadEvent(hotelId: widget.hotelId));
-    context.read<HotelsBloc>().add(HotelDetailLoadEvent(hotelId: widget.hotelId));
+    context
+        .read<HotelsBloc>()
+        .add(HotelDetailLoadEvent(hotelId: widget.hotelId));
+    
+    // Initialize WebSocket connection
+    _initializeWebSocket();
+    
+    // Listen to typing changes
+    _messageController.addListener(_onTypingChanged);
+  }
+
+  void _initializeWebSocket() {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is AuthAuthenticated) {
+      // Try to connect WebSocket for real-time messaging
+      _connectWebSocket();
+    }
+  }
+
+  Future<void> _connectWebSocket() async {
+    try {
+      // For now, use a placeholder token since WebSocket is optional
+      // TODO: Get real token from auth state when needed
+      const token = 'placeholder_token';
+      
+      context.read<ChatBloc>().add(ChatConnectWebSocketEvent(
+        hotelId: widget.hotelId,
+        token: token,
+      ));
+      print('WebSocket connection initialized for hotel ${widget.hotelId}');
+    } catch (e) {
+      print('Failed to initialize WebSocket: $e');
+      // Continue without WebSocket - will fall back to API polling
+    }
   }
 
   @override
   void dispose() {
+    _messageController.removeListener(_onTypingChanged);
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
 
+  void _onTypingChanged() {
+    final isCurrentlyTyping = _messageController.text.isNotEmpty;
+    if (isCurrentlyTyping != _isTyping) {
+      setState(() {
+        _isTyping = isCurrentlyTyping;
+      });
+    }
+  }
+
+  bool get _isChatDisabled {
+    // Disable chat if booking is completed (checked_out) or cancelled
+    return widget.bookingStatus == 'checked_out' || widget.bookingStatus == 'cancelled';
+  }
+
   void _sendMessage() {
+    if (_isChatDisabled) return;
+    
     final message = _messageController.text.trim();
     if (message.isNotEmpty) {
       context.read<ChatBloc>().add(ChatSendMessageEvent(
-        hotelId: widget.hotelId,
-        message: message,
-      ));
+            hotelId: widget.hotelId,
+            message: message,
+          ));
       _messageController.clear();
       _scrollToBottom();
     }
@@ -64,13 +119,37 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
+  String _formatMessageTime(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+    
+    // Always show current time for messages sent today
+    if (difference.inDays == 0) {
+      return DateFormat('HH:mm').format(dateTime);
+    } else if (difference.inDays == 1) {
+      return 'Yesterday ${DateFormat('HH:mm').format(dateTime)}';
+    } else if (difference.inDays < 7) {
+      return DateFormat('EEE HH:mm').format(dateTime);
+    } else {
+      return DateFormat('MMM dd, HH:mm').format(dateTime);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+        leading: NavigationUtils.backButton(
+          context,
+          onPressed: () {
+            print('ChatScreen: Back button pressed, using context.pop()');
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            } else {
+              print('ChatScreen: Cannot pop, falling back to /chats');
+              context.go('/chats');
+            }
+          },
         ),
         title: BlocListener<HotelsBloc, HotelsState>(
           listener: (context, state) {
@@ -97,18 +176,31 @@ class _ChatScreenState extends State<ChatScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _hotel?.name ?? 'Hotel Chat',
+                      _hotel?.ownerName ?? _hotel?.name ?? 'Hotel Chat',
                       style: GoogleFonts.poppins(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    Text(
-                      'AI Assistant • Online',
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        color: Colors.green,
-                      ),
+                    Row(
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: _isChatDisabled ? Colors.grey : Colors.green,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          _isChatDisabled ? 'Hotel Owner • Offline' : 'Hotel Owner • Online',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            color: _isChatDisabled ? Colors.grey : Colors.green,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -121,7 +213,7 @@ class _ChatScreenState extends State<ChatScreen> {
             icon: const Icon(Icons.info_outline),
             onPressed: () {
               if (_hotel != null) {
-                context.go('/home/hotel/${_hotel!.id}');
+                context.go('/hotel/${_hotel!.id}');
               }
             },
           ),
@@ -135,39 +227,61 @@ class _ChatScreenState extends State<ChatScreen> {
               listener: (context, state) {
                 if (state is ChatLoaded) {
                   _scrollToBottom();
+                } else if (state is ChatError) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(state.message),
+                      backgroundColor: Colors.red,
+                      behavior: SnackBarBehavior.floating,
+                      margin: const EdgeInsets.all(16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  );
                 }
               },
               builder: (context, state) {
                 if (state is ChatLoading) {
                   return const Center(child: CircularProgressIndicator());
                 } else if (state is ChatLoaded || state is ChatMessageSending) {
-                  final messages = state is ChatLoaded 
-                      ? state.messages 
+                  final messages = state is ChatLoaded
+                      ? state.messages
                       : (state as ChatMessageSending).messages;
-                  
+
                   if (messages.isEmpty) {
                     return _buildEmptyState();
                   }
-                  
-                  return ListView.separated(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.all(16),
-                    itemCount: messages.length,
-                    separatorBuilder: (context, index) => const SizedBox(height: 16),
-                    itemBuilder: (context, index) {
-                      final message = messages[index];
-                      return _buildMessageBubble(message);
-                    },
+
+                  return Column(
+                    children: [
+                      Expanded(
+                        child: ListView.separated(
+                          controller: _scrollController,
+                          padding: const EdgeInsets.all(16),
+                          itemCount: messages.length,
+                          separatorBuilder: (context, index) =>
+                              const SizedBox(height: 16),
+                          itemBuilder: (context, index) {
+                            final message = messages[index];
+                            return _buildMessageBubble(message);
+                          },
+                        ),
+                      ),
+                      // Simulated typing indicator
+                      _buildTypingIndicator(),
+                    ],
                   );
                 } else if (state is ChatError) {
                   return _buildErrorState(state.message);
+                } else {
+                  // Fallback for any unexpected state
+                  return _buildEmptyState();
                 }
-                
-                return _buildEmptyState();
               },
             ),
           ),
-          
+
           // Message input
           Container(
             padding: const EdgeInsets.all(16),
@@ -182,21 +296,51 @@ class _ChatScreenState extends State<ChatScreen> {
             child: SafeArea(
               child: Row(
                 children: [
+                  // Attachment button
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surface,
+                      shape: BoxShape.circle,
+                    ),
+                    child: IconButton(
+                      icon: Icon(
+                        Icons.attach_file,
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                        size: 20,
+                      ),
+                      onPressed: () {
+                        // TODO: Implement file attachment
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('File attachment coming soon!')),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: Container(
+                      constraints: const BoxConstraints(maxHeight: 120),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).inputDecorationTheme.fillColor,
+                        color: Theme.of(context).colorScheme.surface,
                         borderRadius: BorderRadius.circular(24),
+                        border: Border.all(
+                          color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+                        ),
                       ),
                       child: TextField(
                         controller: _messageController,
+                        enabled: !_isChatDisabled,
                         maxLines: null,
                         textCapitalization: TextCapitalization.sentences,
-                        style: GoogleFonts.poppins(),
+                        style: GoogleFonts.poppins(fontSize: 14),
                         decoration: InputDecoration(
-                          hintText: 'Type a message...',
+                          hintText: _isChatDisabled ? 'Chat session ended' : 'Type your message...',
                           hintStyle: GoogleFonts.poppins(
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                            fontSize: 14,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withOpacity(0.6),
                           ),
                           border: InputBorder.none,
                           contentPadding: const EdgeInsets.symmetric(
@@ -205,10 +349,11 @@ class _ChatScreenState extends State<ChatScreen> {
                           ),
                         ),
                         onSubmitted: (_) => _sendMessage(),
+                        textInputAction: TextInputAction.send,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 8),
                   BlocBuilder<ChatBloc, ChatState>(
                     builder: (context, state) {
                       final isLoading = state is ChatMessageSending;
@@ -224,14 +369,16 @@ class _ChatScreenState extends State<ChatScreen> {
                                   height: 20,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    color: Theme.of(context).colorScheme.onPrimary,
+                                    color:
+                                        Theme.of(context).colorScheme.onPrimary,
                                   ),
                                 )
                               : Icon(
                                   Icons.send,
-                                  color: Theme.of(context).colorScheme.onPrimary,
+                                  color:
+                                      Theme.of(context).colorScheme.onPrimary,
                                 ),
-                          onPressed: isLoading ? null : _sendMessage,
+                          onPressed: (isLoading || _isChatDisabled) ? null : _sendMessage,
                         ),
                       );
                     },
@@ -247,26 +394,24 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Widget _buildMessageBubble(ChatMessage message) {
     final isFromUser = message.isFromUser;
-    
+
     return Row(
-      mainAxisAlignment: isFromUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+      mainAxisAlignment:
+          isFromUser ? MainAxisAlignment.end : MainAxisAlignment.start,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (!isFromUser) ...[
           CircleAvatar(
             radius: 16,
-            backgroundColor: message.isAiResponse 
-                ? Theme.of(context).colorScheme.secondary
-                : Theme.of(context).colorScheme.primary,
+            backgroundColor: Theme.of(context).colorScheme.primary,
             child: Icon(
-              message.isAiResponse ? Icons.smart_toy : Icons.person,
+              Icons.hotel,
               size: 16,
               color: Theme.of(context).colorScheme.onPrimary,
             ),
           ),
           const SizedBox(width: 8),
         ],
-        
         Flexible(
           child: Container(
             constraints: BoxConstraints(
@@ -274,7 +419,7 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: isFromUser 
+              color: isFromUser
                   ? Theme.of(context).colorScheme.primary
                   : Theme.of(context).cardColor,
               borderRadius: BorderRadius.only(
@@ -294,7 +439,7 @@ class _ChatScreenState extends State<ChatScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (!isFromUser && !message.isAiResponse) ...[
+                if (!isFromUser) ...[
                   Text(
                     'Hotel Staff',
                     style: GoogleFonts.poppins(
@@ -305,38 +450,45 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                   const SizedBox(height: 4),
                 ],
-                
                 Text(
                   message.message,
                   style: GoogleFonts.poppins(
                     fontSize: 14,
-                    color: isFromUser 
+                    color: isFromUser
                         ? Theme.of(context).colorScheme.onPrimary
                         : Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
-                
                 const SizedBox(height: 4),
-                
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      DateFormat('HH:mm').format(message.createdAt),
+                      _formatMessageTime(message.createdAt),
                       style: GoogleFonts.poppins(
                         fontSize: 10,
-                        color: isFromUser 
-                            ? Theme.of(context).colorScheme.onPrimary.withOpacity(0.7)
-                            : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                        color: isFromUser
+                            ? Theme.of(context)
+                                .colorScheme
+                                .onPrimary
+                                .withOpacity(0.7)
+                            : Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withOpacity(0.6),
                       ),
                     ),
-                    
-                    if (message.isAiResponse) ...[
+                    if (isFromUser) ...[
                       const SizedBox(width: 4),
                       Icon(
-                        Icons.smart_toy,
+                        message.isRead ? Icons.done_all : Icons.done,
                         size: 10,
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                        color: message.isRead 
+                          ? Colors.blue 
+                          : Theme.of(context)
+                              .colorScheme
+                              .onPrimary
+                              .withOpacity(0.7),
                       ),
                     ],
                   ],
@@ -345,7 +497,6 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ),
         ),
-        
         if (isFromUser) ...[
           const SizedBox(width: 8),
           CircleAvatar(
@@ -392,10 +543,11 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Ask questions about the hotel, amenities, or local area. Our AI assistant is here to help!',
+              'Chat with hotel staff about your booking, amenities, services, or any questions you have.',
               style: GoogleFonts.poppins(
                 fontSize: 14,
-                color: Theme.of(context).colorScheme.onBackground.withOpacity(0.6),
+                color:
+                    Theme.of(context).colorScheme.onBackground.withOpacity(0.6),
               ),
               textAlign: TextAlign.center,
             ),
@@ -409,10 +561,10 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Widget _buildSuggestedMessages() {
     final suggestions = [
-      'What amenities are available?',
-      'What are the check-in times?',
-      'Any restaurants nearby?',
-      'How far is the airport?',
+      'Hello! I have a question about my booking',
+      'What time is check-in?',
+      'Do you have airport shuttle service?',
+      'Can I request late checkout?',
     ];
 
     return Wrap(
@@ -471,19 +623,108 @@ class _ChatScreenState extends State<ChatScreen> {
               message,
               style: GoogleFonts.poppins(
                 fontSize: 14,
-                color: Theme.of(context).colorScheme.onBackground.withOpacity(0.6),
+                color:
+                    Theme.of(context).colorScheme.onBackground.withOpacity(0.6),
               ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: () {
-                context.read<ChatBloc>().add(ChatLoadEvent(hotelId: widget.hotelId));
+                context
+                    .read<ChatBloc>()
+                    .add(ChatLoadEvent(hotelId: widget.hotelId));
               },
               child: const Text('Retry'),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildTypingIndicator() {
+    // Simulate someone typing (you can replace this with real-time typing status)
+    bool showTyping = _messageController.text.isNotEmpty; // Show when user is typing
+    
+    if (!showTyping) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 16,
+            backgroundColor: Theme.of(context).colorScheme.primary,
+            child: Icon(
+              Icons.hotel,
+              size: 16,
+              color: Theme.of(context).colorScheme.onPrimary,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardColor,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(16),
+                topRight: Radius.circular(16),
+                bottomRight: Radius.circular(16),
+                bottomLeft: Radius.circular(4),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildTypingDots(),
+                const SizedBox(width: 8),
+                Text(
+                  'Hotel staff is typing...',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTypingDots() {
+    return Row(
+      children: [
+        _buildDot(0),
+        const SizedBox(width: 4),
+        _buildDot(1),
+        const SizedBox(width: 4),
+        _buildDot(2),
+      ],
+    );
+  }
+
+  Widget _buildDot(int index) {
+    return AnimatedContainer(
+      duration: Duration(milliseconds: 600 + (index * 200)),
+      curve: Curves.easeInOut,
+      width: 6,
+      height: 6,
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
+        shape: BoxShape.circle,
       ),
     );
   }

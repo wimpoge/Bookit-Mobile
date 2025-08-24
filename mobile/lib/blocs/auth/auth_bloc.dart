@@ -15,21 +15,29 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthRegisterEvent>(_onRegister);
     on<AuthLogoutEvent>(_onLogout);
     on<AuthUpdateUserEvent>(_onUpdateUser);
+    on<AuthGoogleLoginEvent>(_onGoogleLogin);
   }
 
   Future<void> _onCheckStatus(AuthCheckStatusEvent event, Emitter<AuthState> emit) async {
     emit(AuthLoading());
     
     try {
+      // Initialize token asynchronously to avoid blocking the UI
+      print('AuthBloc: Initializing token asynchronously...');
       await _authService.initializeToken();
+      
+      print('AuthBloc: Getting current user...');
       final user = await _authService.getCurrentUser();
       
       if (user != null) {
+        print('AuthBloc: User found, emitting AuthAuthenticated');
         emit(AuthAuthenticated(user));
       } else {
+        print('AuthBloc: No user found, emitting AuthUnauthenticated');
         emit(AuthUnauthenticated());
       }
     } catch (e) {
+      print('AuthBloc: Error during auth check: $e');
       emit(AuthUnauthenticated());
     }
   }
@@ -80,7 +88,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   Future<void> _onUpdateUser(AuthUpdateUserEvent event, Emitter<AuthState> emit) async {
     if (state is! AuthAuthenticated) return;
     
-    final currentState = state as AuthAuthenticated;
     emit(AuthLoading());
     
     try {
@@ -90,6 +97,22 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         emit(AuthAuthenticated(updatedUser));
       } else {
         emit(AuthError('Failed to update profile'));
+      }
+    } catch (e) {
+      emit(AuthError(e.toString()));
+    }
+  }
+
+  Future<void> _onGoogleLogin(AuthGoogleLoginEvent event, Emitter<AuthState> emit) async {
+    emit(AuthLoading());
+    
+    try {
+      final result = await _authService.googleLogin();
+      
+      if (result.isSuccess && result.user != null) {
+        emit(AuthAuthenticated(result.user!));
+      } else {
+        emit(AuthError(result.error ?? 'Google login failed'));
       }
     } catch (e) {
       emit(AuthError(e.toString()));

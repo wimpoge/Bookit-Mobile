@@ -14,13 +14,14 @@ class OwnerBookingsScreen extends StatefulWidget {
   State<OwnerBookingsScreen> createState() => _OwnerBookingsScreenState();
 }
 
-class _OwnerBookingsScreenState extends State<OwnerBookingsScreen> with TickerProviderStateMixin {
+class _OwnerBookingsScreenState extends State<OwnerBookingsScreen>
+    with TickerProviderStateMixin {
   late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
     context.read<BookingsBloc>().add(OwnerBookingsLoadEvent());
   }
 
@@ -45,6 +46,7 @@ class _OwnerBookingsScreenState extends State<OwnerBookingsScreen> with TickerPr
           controller: _tabController,
           isScrollable: true,
           tabs: const [
+            Tab(text: 'Pending'),
             Tab(text: 'Confirmed'),
             Tab(text: 'Check-ins'),
             Tab(text: 'Check-outs'),
@@ -60,19 +62,23 @@ class _OwnerBookingsScreenState extends State<OwnerBookingsScreen> with TickerPr
           ),
           indicatorColor: Theme.of(context).colorScheme.primary,
           labelColor: Theme.of(context).colorScheme.primary,
-          unselectedLabelColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+          unselectedLabelColor:
+              Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
         ),
       ),
       body: BlocConsumer<BookingsBloc, BookingsState>(
         listener: (context, state) {
-          if (state is BookingCancelSuccess) {
+          if (state is BookingCancelSuccess ||
+              state is BookingConfirmSuccess ||
+              state is BookingRejectSuccess ||
+              state is BookingCheckInSuccess ||
+              state is BookingCheckOutSuccess) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.message),
                 backgroundColor: Colors.green,
               ),
             );
-            // Reload bookings
             context.read<BookingsBloc>().add(OwnerBookingsLoadEvent());
           } else if (state is BookingsError) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -91,7 +97,7 @@ class _OwnerBookingsScreenState extends State<OwnerBookingsScreen> with TickerPr
           } else if (state is BookingsLoaded) {
             return _buildBookingTabs(state.bookings);
           }
-          
+
           return const SizedBox.shrink();
         },
       ),
@@ -124,7 +130,8 @@ class _OwnerBookingsScreenState extends State<OwnerBookingsScreen> with TickerPr
               message,
               style: GoogleFonts.poppins(
                 fontSize: 14,
-                color: Theme.of(context).colorScheme.onBackground.withOpacity(0.6),
+                color:
+                    Theme.of(context).colorScheme.onBackground.withOpacity(0.6),
               ),
               textAlign: TextAlign.center,
             ),
@@ -142,24 +149,26 @@ class _OwnerBookingsScreenState extends State<OwnerBookingsScreen> with TickerPr
   }
 
   Widget _buildBookingTabs(List<Booking> bookings) {
-    final confirmedBookings = bookings.where((b) => 
-        b.status == BookingStatus.confirmed).toList();
-    final checkInBookings = bookings.where((b) => 
-        b.status == BookingStatus.confirmed && 
-        b.checkInDate.isBefore(DateTime.now().add(const Duration(days: 1)))).toList();
-    final checkOutBookings = bookings.where((b) => 
-        b.status == BookingStatus.checkedIn).toList();
+    final pendingBookings =
+        bookings.where((b) => b.status == BookingStatus.pending).toList();
+    final confirmedBookings =
+        bookings.where((b) => b.status == BookingStatus.confirmed).toList();
+    final checkInBookings = bookings
+        .where((b) =>
+            b.status == BookingStatus.confirmed &&
+            b.checkInDate.isBefore(DateTime.now().add(const Duration(days: 1))))
+        .toList();
+    final checkOutBookings =
+        bookings.where((b) => b.status == BookingStatus.checkedIn).toList();
 
     return Column(
       children: [
-        // Stats header
         _buildStatsHeader(bookings),
-        
-        // Tabs content
         Expanded(
           child: TabBarView(
             controller: _tabController,
             children: [
+              _buildBookingsList(pendingBookings, OwnerBookingType.pending),
               _buildBookingsList(confirmedBookings, OwnerBookingType.confirmed),
               _buildBookingsList(checkInBookings, OwnerBookingType.checkIn),
               _buildBookingsList(checkOutBookings, OwnerBookingType.checkOut),
@@ -173,14 +182,19 @@ class _OwnerBookingsScreenState extends State<OwnerBookingsScreen> with TickerPr
 
   Widget _buildStatsHeader(List<Booking> bookings) {
     final today = DateTime.now();
-    final todayBookings = bookings.where((b) => 
-        b.checkInDate.day == today.day &&
-        b.checkInDate.month == today.month &&
-        b.checkInDate.year == today.year).length;
-    
+    final todayBookings = bookings
+        .where((b) =>
+            b.checkInDate.day == today.day &&
+            b.checkInDate.month == today.month &&
+            b.checkInDate.year == today.year)
+        .length;
+
     final totalRevenue = bookings
         .where((b) => b.status != BookingStatus.cancelled)
         .fold<double>(0, (sum, booking) => sum + booking.totalPrice);
+
+    final pendingCount =
+        bookings.where((b) => b.status == BookingStatus.pending).length;
 
     return Container(
       margin: const EdgeInsets.all(20),
@@ -233,7 +247,15 @@ class _OwnerBookingsScreenState extends State<OwnerBookingsScreen> with TickerPr
                   Icons.book_online,
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildStatItem(
+                  '$pendingCount',
+                  'Pending',
+                  Icons.pending_actions,
+                ),
+              ),
+              const SizedBox(width: 12),
               Expanded(
                 child: _buildStatItem(
                   '$todayBookings',
@@ -241,7 +263,7 @@ class _OwnerBookingsScreenState extends State<OwnerBookingsScreen> with TickerPr
                   Icons.login,
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 12),
               Expanded(
                 child: _buildStatItem(
                   '\$${totalRevenue.toStringAsFixed(0)}',
@@ -310,15 +332,20 @@ class _OwnerBookingsScreenState extends State<OwnerBookingsScreen> with TickerPr
           return OwnerBookingCard(
             booking: booking,
             type: type,
-            onCheckIn: booking.canCheckIn 
+            onConfirm: booking.status == BookingStatus.pending
+                ? () => _performAction(booking, 'confirm')
+                : null,
+            onReject: booking.status == BookingStatus.pending
+                ? () => _showRejectDialog(booking)
+                : null,
+            onCheckIn: booking.canCheckIn
                 ? () => _performAction(booking, 'check-in')
                 : null,
-            onCheckOut: booking.canCheckOut 
+            onCheckOut: booking.canCheckOut
                 ? () => _performAction(booking, 'check-out')
                 : null,
-            onCancel: booking.canCancel 
-                ? () => _showCancelDialog(booking)
-                : null,
+            onCancel:
+                booking.canCancel ? () => _showCancelDialog(booking) : null,
             onViewDetails: () => _showBookingDetails(booking),
           );
         },
@@ -332,9 +359,14 @@ class _OwnerBookingsScreenState extends State<OwnerBookingsScreen> with TickerPr
     IconData icon;
 
     switch (type) {
+      case OwnerBookingType.pending:
+        title = 'No pending bookings';
+        subtitle = 'New booking requests will appear here';
+        icon = Icons.pending_actions;
+        break;
       case OwnerBookingType.confirmed:
         title = 'No confirmed bookings';
-        subtitle = 'New bookings will appear here';
+        subtitle = 'Confirmed bookings will appear here';
         icon = Icons.book_online;
         break;
       case OwnerBookingType.checkIn:
@@ -363,7 +395,8 @@ class _OwnerBookingsScreenState extends State<OwnerBookingsScreen> with TickerPr
             Icon(
               icon,
               size: 64,
-              color: Theme.of(context).colorScheme.onBackground.withOpacity(0.3),
+              color:
+                  Theme.of(context).colorScheme.onBackground.withOpacity(0.3),
             ),
             const SizedBox(height: 16),
             Text(
@@ -379,7 +412,8 @@ class _OwnerBookingsScreenState extends State<OwnerBookingsScreen> with TickerPr
               subtitle,
               style: GoogleFonts.poppins(
                 fontSize: 14,
-                color: Theme.of(context).colorScheme.onBackground.withOpacity(0.6),
+                color:
+                    Theme.of(context).colorScheme.onBackground.withOpacity(0.6),
               ),
               textAlign: TextAlign.center,
             ),
@@ -391,13 +425,64 @@ class _OwnerBookingsScreenState extends State<OwnerBookingsScreen> with TickerPr
 
   void _performAction(Booking booking, String action) {
     switch (action) {
+      case 'confirm':
+        context
+            .read<BookingsBloc>()
+            .add(BookingConfirmEvent(bookingId: booking.id));
+        break;
       case 'check-in':
-        context.read<BookingsBloc>().add(BookingCheckInEvent(bookingId: booking.id));
+        context
+            .read<BookingsBloc>()
+            .add(BookingCheckInEvent(bookingId: booking.id));
         break;
       case 'check-out':
-        context.read<BookingsBloc>().add(BookingCheckOutEvent(bookingId: booking.id));
+        context
+            .read<BookingsBloc>()
+            .add(BookingCheckOutEvent(bookingId: booking.id));
         break;
     }
+  }
+
+  void _showRejectDialog(Booking booking) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          'Reject Booking',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+        ),
+        content: Text(
+          'Are you sure you want to reject the booking for ${booking.hotel.name}? This action cannot be undone and the room will become available again.',
+          style: GoogleFonts.poppins(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(
+              'Keep Pending',
+              style: GoogleFonts.poppins(
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              context
+                  .read<BookingsBloc>()
+                  .add(BookingRejectEvent(bookingId: booking.id));
+            },
+            child: Text(
+              'Reject Booking',
+              style: GoogleFonts.poppins(
+                color: Colors.red,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showCancelDialog(Booking booking) {
@@ -425,7 +510,9 @@ class _OwnerBookingsScreenState extends State<OwnerBookingsScreen> with TickerPr
           TextButton(
             onPressed: () {
               Navigator.of(context).pop();
-              context.read<BookingsBloc>().add(BookingCancelEvent(bookingId: booking.id));
+              context
+                  .read<BookingsBloc>()
+                  .add(BookingCancelEvent(bookingId: booking.id));
             },
             child: Text(
               'Cancel Booking',
@@ -456,7 +543,6 @@ class _OwnerBookingsScreenState extends State<OwnerBookingsScreen> with TickerPr
         ),
         child: Column(
           children: [
-            // Handle
             Container(
               margin: const EdgeInsets.only(top: 12),
               width: 40,
@@ -466,8 +552,6 @@ class _OwnerBookingsScreenState extends State<OwnerBookingsScreen> with TickerPr
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-            
-            // Header
             Padding(
               padding: const EdgeInsets.all(20),
               child: Row(
@@ -487,15 +571,12 @@ class _OwnerBookingsScreenState extends State<OwnerBookingsScreen> with TickerPr
                 ],
               ),
             ),
-            
-            // Content
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Guest info
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -561,6 +642,7 @@ class _OwnerBookingsScreenState extends State<OwnerBookingsScreen> with TickerPr
 }
 
 enum OwnerBookingType {
+  pending,
   confirmed,
   checkIn,
   checkOut,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../blocs/auth/auth_bloc.dart';
@@ -61,41 +62,50 @@ class OwnerProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Owner Profile',
-          style: GoogleFonts.poppins(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
+    return BlocListener<AuthBloc, AuthState>(
+      listener: (context, state) {
+        // Redirect to auth screen when user logs out
+        if (state is AuthUnauthenticated || state is AuthInitial) {
+          context.go('/auth');
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(
+            'Owner Profile',
+            style: GoogleFonts.poppins(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
           ),
+          actions: [
+            BlocBuilder<AuthBloc, AuthState>(
+              builder: (context, state) {
+                if (state is AuthAuthenticated) {
+                  return IconButton(
+                    icon: const Icon(Icons.edit_outlined),
+                    onPressed: () =>
+                        _showEditProfileBottomSheet(context, state.user),
+                  );
+                }
+                return const SizedBox.shrink();
+              },
+            ),
+          ],
         ),
-        actions: [
-          BlocBuilder<AuthBloc, AuthState>(
-            builder: (context, state) {
-              if (state is AuthAuthenticated) {
-                return IconButton(
-                  icon: const Icon(Icons.edit_outlined),
-                  onPressed: () => _showEditProfileBottomSheet(context, state.user),
-                );
-              }
-              return const SizedBox.shrink();
-            },
-          ),
-        ],
-      ),
-      body: BlocBuilder<AuthBloc, AuthState>(
-        builder: (context, state) {
-          if (state is AuthAuthenticated) {
-            return _buildProfileContent(context, state.user);
-          } else if (state is AuthLoading) {
-            return const Center(child: CircularProgressIndicator());
-          } else {
-            return const Center(
-              child: Text('Please login to view profile'),
-            );
-          }
-        },
+        body: BlocBuilder<AuthBloc, AuthState>(
+          builder: (context, state) {
+            if (state is AuthAuthenticated) {
+              return _buildProfileContent(context, state.user);
+            } else if (state is AuthLoading) {
+              return const Center(child: CircularProgressIndicator());
+            } else {
+              return const Center(
+                child: Text('Please login to view profile'),
+              );
+            }
+          },
+        ),
       ),
     );
   }
@@ -107,14 +117,14 @@ class OwnerProfileScreen extends StatelessWidget {
         children: [
           // Profile header
           _buildProfileHeader(context, user),
-          
+
           const SizedBox(height: 32),
-          
+
           // Business stats
           _buildBusinessStats(context),
-          
+
           const SizedBox(height: 32),
-          
+
           // Settings sections
           _buildSettingsSections(context),
         ],
@@ -157,7 +167,12 @@ class OwnerProfileScreen extends StatelessWidget {
                     : null,
                 child: user.profileImage == null
                     ? Text(
-                        user.fullName?.split(' ').map((n) => n[0]).take(2).join() ?? 'O',
+                        user.fullName
+                                ?.split(' ')
+                                .map((n) => n[0])
+                                .take(2)
+                                .join() ??
+                            'O',
                         style: GoogleFonts.poppins(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -188,9 +203,9 @@ class OwnerProfileScreen extends StatelessWidget {
               ),
             ],
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // User info
           Text(
             user.fullName ?? 'Hotel Owner',
@@ -200,9 +215,9 @@ class OwnerProfileScreen extends StatelessWidget {
               color: Theme.of(context).colorScheme.onPrimary,
             ),
           ),
-          
+
           const SizedBox(height: 4),
-          
+
           Text(
             user.email,
             style: GoogleFonts.poppins(
@@ -210,9 +225,9 @@ class OwnerProfileScreen extends StatelessWidget {
               color: Theme.of(context).colorScheme.onPrimary.withOpacity(0.8),
             ),
           ),
-          
+
           const SizedBox(height: 8),
-          
+
           // Owner badge
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -350,11 +365,27 @@ class OwnerProfileScreen extends StatelessWidget {
             },
           ),
           OwnerSettingsItem(
+            icon: Icons.rate_review_outlined,
+            title: 'Reviews Management',
+            subtitle: 'View and reply to guest reviews',
+            onTap: () {
+              context.go('/owner/reviews');
+            },
+          ),
+          OwnerSettingsItem(
             icon: Icons.analytics_outlined,
             title: 'Analytics & Reports',
             subtitle: 'View performance metrics',
             onTap: () {
-              // TODO: Navigate to analytics
+              print('Navigating to analytics screen...');
+              try {
+                context.go('/owner/analytics');
+              } catch (e) {
+                print('Navigation error: $e');
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Navigation error: $e')),
+                );
+              }
             },
           ),
           OwnerSettingsItem(
@@ -366,9 +397,9 @@ class OwnerProfileScreen extends StatelessWidget {
             },
           ),
         ]),
-        
+
         const SizedBox(height: 24),
-        
+
         // Account Settings
         _buildSectionTitle('Account Settings'),
         const SizedBox(height: 12),
@@ -397,47 +428,62 @@ class OwnerProfileScreen extends StatelessWidget {
             title: 'Notifications',
             subtitle: 'Manage booking and guest notifications',
             onTap: () {
-              // TODO: Navigate to notifications
+              context.go('/owner/profile/notifications');
             },
           ),
         ]),
-        
+
         const SizedBox(height: 24),
-        
+
         // App Settings
         _buildSectionTitle('App Settings'),
         const SizedBox(height: 12),
         BlocBuilder<ThemeBloc, ThemeState>(
           builder: (context, themeState) {
-            return _buildSettingsGroup(context, [
-              OwnerSettingsItem(
-                icon: themeState.isDarkMode ? Icons.light_mode : Icons.dark_mode,
-                title: 'Dark Mode',
-                subtitle: themeState.isDarkMode ? 'Enabled' : 'Disabled',
-                trailing: Switch(
-                  value: themeState.isDarkMode,
-                  onChanged: (value) {
-                    context.read<ThemeBloc>().add(ThemeToggleEvent());
-                  },
-                ),
-                onTap: () {
-                  context.read<ThemeBloc>().add(ThemeToggleEvent());
-                },
-              ),
-              OwnerSettingsItem(
-                icon: Icons.language_outlined,
-                title: 'Language & Region',
-                subtitle: 'English (US)',
-                onTap: () {
-                  // TODO: Navigate to language settings
-                },
-              ),
-            ]);
+            return BlocBuilder<AuthBloc, AuthState>(
+              builder: (context, authState) {
+                String languageSubtitle = 'English (US)';
+                if (authState is AuthAuthenticated) {
+                  final user = authState.user;
+                  if (user.language == 'id') {
+                    languageSubtitle = 'Bahasa Indonesia';
+                  } else {
+                    languageSubtitle = 'English (US)';
+                  }
+                }
+                
+                return _buildSettingsGroup(context, [
+                  OwnerSettingsItem(
+                    icon:
+                        themeState.isDarkMode ? Icons.light_mode : Icons.dark_mode,
+                    title: 'Dark Mode',
+                    subtitle: themeState.isDarkMode ? 'Enabled' : 'Disabled',
+                    trailing: Switch(
+                      value: themeState.isDarkMode,
+                      onChanged: (value) {
+                        context.read<ThemeBloc>().add(ThemeToggleEvent());
+                      },
+                    ),
+                    onTap: () {
+                      context.read<ThemeBloc>().add(ThemeToggleEvent());
+                    },
+                  ),
+                  OwnerSettingsItem(
+                    icon: Icons.language_outlined,
+                    title: 'Language & Region',
+                    subtitle: languageSubtitle,
+                    onTap: () {
+                      context.go('/owner/profile/language');
+                    },
+                  ),
+                ]);
+              },
+            );
           },
         ),
-        
+
         const SizedBox(height: 24),
-        
+
         // Support & Legal
         _buildSectionTitle('Support & Legal'),
         const SizedBox(height: 12),
@@ -447,15 +493,15 @@ class OwnerProfileScreen extends StatelessWidget {
             title: 'Owner Support',
             subtitle: 'Get help with your business account',
             onTap: () {
-              // TODO: Navigate to owner support
+              context.go('/owner/profile/owner-help');
             },
           ),
           OwnerSettingsItem(
-            icon: Icons.article_outlined,
-            title: 'Terms of Service',
-            subtitle: 'Business terms and conditions',
+            icon: Icons.info_outline,
+            title: 'About',
+            subtitle: 'App version and information',
             onTap: () {
-              // TODO: Navigate to terms
+              context.go('/owner/profile/about');
             },
           ),
           OwnerSettingsItem(
@@ -463,13 +509,13 @@ class OwnerProfileScreen extends StatelessWidget {
             title: 'Privacy Policy',
             subtitle: 'How we handle your business data',
             onTap: () {
-              // TODO: Navigate to privacy policy
+              context.go('/owner/profile/privacy');
             },
           ),
         ]),
-        
+
         const SizedBox(height: 32),
-        
+
         // Logout button
         Container(
           width: double.infinity,
@@ -534,7 +580,8 @@ class OwnerProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSettingsGroup(BuildContext context, List<OwnerSettingsItem> items) {
+  Widget _buildSettingsGroup(
+      BuildContext context, List<OwnerSettingsItem> items) {
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
@@ -552,14 +599,15 @@ class OwnerProfileScreen extends StatelessWidget {
           final index = entry.key;
           final item = entry.value;
           final isLast = index == items.length - 1;
-          
+
           return Column(
             children: [
               ListTile(
                 leading: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                    color:
+                        Theme.of(context).colorScheme.primary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
@@ -579,13 +627,20 @@ class OwnerProfileScreen extends StatelessWidget {
                   item.subtitle,
                   style: GoogleFonts.poppins(
                     fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withOpacity(0.6),
                   ),
                 ),
-                trailing: item.trailing ?? Icon(
-                  Icons.chevron_right,
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
-                ),
+                trailing: item.trailing ??
+                    Icon(
+                      Icons.chevron_right,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withOpacity(0.4),
+                    ),
                 onTap: item.onTap,
               ),
               if (!isLast)
