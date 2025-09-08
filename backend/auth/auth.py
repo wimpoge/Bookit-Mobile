@@ -36,9 +36,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     return encoded_jwt
 
 def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    print(f"verify_token called with credentials: {credentials}")
     if not credentials:
-        print("No credentials provided")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials - No authorization header",
@@ -46,26 +44,18 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
         )
     
     try:
-        print(f"Attempting to decode token: {credentials.credentials[:20]}...")
-        print(f"Using secret key: {SECRET_KEY[:10]}...")
-        print(f"Using algorithm: {ALGORITHM}")
         
         payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
-        print(f"Token decoded successfully. Payload: {payload}")
         
         email: str = payload.get("sub")
         if email is None:
-            print("No email found in token payload")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Could not validate credentials - Invalid token payload",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-        print(f"Email extracted from token: {email}")
         return email
     except JWTError as e:
-        print(f"JWT Error: {e}")
-        print(f"Token that failed: {credentials.credentials}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Could not validate credentials - {str(e)}",
@@ -73,21 +63,17 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
         )
 
 def get_current_user(email: str = Depends(verify_token), db: Session = Depends(get_db)):
-    print(f"get_current_user called for email: {email}")
     user = db.query(models.User).filter(models.User.email == email).first()
     if user is None:
-        print(f"User not found for email: {email}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found"
         )
     if not user.is_active:
-        print(f"User {email} is inactive")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Inactive user"
         )
-    print(f"User found: {user.id} - {user.email}")
     return user
 
 def get_current_owner(current_user: models.User = Depends(get_current_user)):

@@ -351,34 +351,19 @@ class _OwnerChatsScreenState extends State<OwnerChatsScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.chat_bubble_outline,
-                size: 64,
-                color: Theme.of(context).colorScheme.primary,
-              ),
+            Image.asset(
+              'assets/images/No Chats Found.png',
+              width: 120,
+              height: 120,
+              fit: BoxFit.contain,
             ),
             const SizedBox(height: 24),
             Text(
-              'No conversations yet',
-              style: GoogleFonts.poppins(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onBackground,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
               'When guests message you about your hotels, their conversations will appear here',
               style: GoogleFonts.poppins(
-                fontSize: 16,
+                fontSize: 18,
                 color:
-                    Theme.of(context).colorScheme.onBackground.withOpacity(0.6),
+                    Theme.of(context).colorScheme.onBackground.withOpacity(0.7),
               ),
               textAlign: TextAlign.center,
             ),
@@ -405,10 +390,11 @@ class _OwnerChatsScreenState extends State<OwnerChatsScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: Theme.of(context).colorScheme.error,
+            Image.asset(
+              'assets/images/500.png',
+              width: 120,
+              height: 120,
+              fit: BoxFit.contain,
             ),
             const SizedBox(height: 16),
             Text(

@@ -49,8 +49,8 @@ class OwnerChatsLoaded extends ChatState {
 
 class ChatMessagesLoaded extends ChatState {
   final List<ChatMessage> messages;
-  final int hotelId;
-  final int? userId;
+  final String hotelId;
+  final String? userId;
 
   const ChatMessagesLoaded({
     required this.messages,

@@ -11,7 +11,7 @@ import '../../models/review.dart';
 import '../../widgets/custom_button.dart';
 
 class BookingDetailScreen extends StatefulWidget {
-  final int bookingId;
+  final String bookingId;
 
   const BookingDetailScreen({
     Key? key,

@@ -1,5 +1,8 @@
-import 'dart:io';
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+// Conditional import for dart:io
+import 'dart:io' if (dart.library.html) 'dart:html' as io;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -41,7 +44,7 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
   final _locationFieldKey = GlobalKey();
 
   List<String> _selectedAmenities = [];
-  List<File> _selectedImageFiles = [];
+  List<XFile> _selectedImageFiles = [];
   List<String> _uploadedImageUrls = [];
   bool _isUploadingImages = false;
   
@@ -485,7 +488,7 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
     );
   }
 
-  Widget _buildImageItem(File imageFile, int index) {
+  Widget _buildImageItem(XFile imageFile, int index) {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
@@ -541,7 +544,7 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
     );
   }
 
-  Widget _buildSafeImageWidget(File imageFile) {
+  Widget _buildSafeImageWidget(XFile imageFile) {
     return LayoutBuilder(
       builder: (context, constraints) {
         // Ensure we have valid constraints
@@ -561,48 +564,54 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
             color: Colors.grey[300],
             borderRadius: BorderRadius.circular(8),
           ),
-          child: FutureBuilder<bool>(
-            future: imageFile.exists(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                );
-              }
-              
-              if (snapshot.hasError || !snapshot.hasData || !snapshot.data!) {
-                return const Center(
-                  child: Icon(Icons.error, size: 32, color: Colors.grey),
-                );
-              }
-              
-              return Image.file(
-                imageFile,
-                fit: BoxFit.cover,
-                cacheWidth: constraints.maxWidth.round(),
-                cacheHeight: constraints.maxHeight.round(),
-                errorBuilder: (context, error, stackTrace) {
-                  print('Image error: $error');
-                  return Container(
-                    color: Colors.grey[300],
-                    child: const Center(
-                      child: Icon(Icons.broken_image, size: 32, color: Colors.grey),
-                    ),
-                  );
-                },
-                frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-                  if (frame == null) {
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: kIsWeb 
+              ? Image.network(
+                  imageFile.path,
+                  fit: BoxFit.cover,
+                  width: constraints.maxWidth,
+                  height: constraints.maxHeight,
+                  errorBuilder: (context, error, stackTrace) {
                     return Container(
                       color: Colors.grey[300],
                       child: const Center(
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                        child: Icon(Icons.error, size: 32, color: Colors.grey),
                       ),
                     );
-                  }
-                  return child;
-                },
-              );
-            },
+                  },
+                )
+              : FutureBuilder<Uint8List>(
+                  future: imageFile.readAsBytes(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      );
+                    }
+                    
+                    if (snapshot.hasError || !snapshot.hasData) {
+                      return const Center(
+                        child: Icon(Icons.error, size: 32, color: Colors.grey),
+                      );
+                    }
+                    
+                    return Image.memory(
+                      snapshot.data!,
+                      fit: BoxFit.cover,
+                      width: constraints.maxWidth,
+                      height: constraints.maxHeight,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          color: Colors.grey[300],
+                          child: const Center(
+                            child: Icon(Icons.broken_image, size: 32, color: Colors.grey),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
           ),
         );
       },
@@ -811,9 +820,7 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
         }
         
         setState(() {
-          _selectedImageFiles.addAll(
-            imagesToAdd.map((image) => File(image.path))
-          );
+          _selectedImageFiles.addAll(imagesToAdd);
         });
         
         if (totalAfterAdd <= 10) {
@@ -843,11 +850,22 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
             initialLatitude: _selectedLatitude,
             initialLongitude: _selectedLongitude,
             initialAddress: _selectedAddress,
-            onLocationSelected: (latitude, longitude, address) {
+            onLocationSelected: (latitude, longitude, address, street, city, country) {
               setState(() {
                 _selectedLatitude = latitude;
                 _selectedLongitude = longitude;
                 _selectedAddress = address;
+                
+                // Auto-fill the text controllers with parsed address components
+                if (street.isNotEmpty) {
+                  _addressController.text = street;
+                }
+                if (city.isNotEmpty) {
+                  _cityController.text = city;
+                }
+                if (country.isNotEmpty) {
+                  _countryController.text = country;
+                }
               });
             },
           ),
@@ -871,7 +889,9 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
     });
   }
 
-  void _showImageZoom(File imageFile) {
+  void _showImageZoom(XFile imageFile) {
+    final TransformationController transformationController = TransformationController();
+    
     showDialog(
       context: context,
       barrierDismissible: true,
@@ -883,30 +903,15 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
               children: [
                 Center(
                   child: InteractiveViewer(
+                    transformationController: transformationController,
                     panEnabled: true,
-                    minScale: 0.5,
-                    maxScale: 4.0,
-                    child: FutureBuilder<bool>(
-                      future: imageFile.exists(),
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
-                          return const Center(
-                            child: CircularProgressIndicator(color: Colors.white),
-                          );
-                        }
-                        
-                        if (snapshot.hasError || !snapshot.hasData || !snapshot.data!) {
-                          return const Center(
-                            child: Icon(
-                              Icons.error,
-                              size: 64,
-                              color: Colors.white,
-                            ),
-                          );
-                        }
-                        
-                        return Image.file(
-                          imageFile,
+                    boundaryMargin: const EdgeInsets.all(20),
+                    minScale: 0.1,
+                    maxScale: 5.0,
+                    scaleEnabled: true,
+                    child: kIsWeb 
+                      ? Image.network(
+                          imageFile.path,
                           fit: BoxFit.contain,
                           errorBuilder: (context, error, stackTrace) {
                             return const Center(
@@ -917,11 +922,119 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
                               ),
                             );
                           },
-                        );
-                      },
-                    ),
+                        )
+                      : FutureBuilder<Uint8List>(
+                          future: imageFile.readAsBytes(),
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState == ConnectionState.waiting) {
+                              return const Center(
+                                child: CircularProgressIndicator(color: Colors.white),
+                              );
+                            }
+                            
+                            if (snapshot.hasError || !snapshot.hasData) {
+                              return const Center(
+                                child: Icon(
+                                  Icons.error,
+                                  size: 64,
+                                  color: Colors.white,
+                                ),
+                              );
+                            }
+                            
+                            return Image.memory(
+                              snapshot.data!,
+                              fit: BoxFit.contain,
+                              errorBuilder: (context, error, stackTrace) {
+                                return const Center(
+                                  child: Icon(
+                                    Icons.broken_image,
+                                    size: 64,
+                                    color: Colors.white,
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                        ),
                   ),
                 ),
+                // Zoom controls
+                Positioned(
+                  bottom: 100,
+                  right: 16,
+                  child: Column(
+                    children: [
+                      Material(
+                        color: Colors.transparent,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.black54,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: IconButton(
+                            onPressed: () {
+                              final Matrix4 matrix = Matrix4.copy(transformationController.value);
+                              matrix.scale(1.2);
+                              transformationController.value = matrix;
+                            },
+                            icon: const Icon(
+                              Icons.zoom_in,
+                              color: Colors.white,
+                              size: 24,
+                            ),
+                            tooltip: 'Zoom In',
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Material(
+                        color: Colors.transparent,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.black54,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: IconButton(
+                            onPressed: () {
+                              final Matrix4 matrix = Matrix4.copy(transformationController.value);
+                              matrix.scale(0.8);
+                              transformationController.value = matrix;
+                            },
+                            icon: const Icon(
+                              Icons.zoom_out,
+                              color: Colors.white,
+                              size: 24,
+                            ),
+                            tooltip: 'Zoom Out',
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Material(
+                        color: Colors.transparent,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.black54,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: IconButton(
+                            onPressed: () {
+                              transformationController.value = Matrix4.identity();
+                            },
+                            icon: const Icon(
+                              Icons.center_focus_strong,
+                              color: Colors.white,
+                              size: 24,
+                            ),
+                            tooltip: 'Reset Zoom',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Close button
                 Positioned(
                   top: 16,
                   right: 16,
@@ -964,18 +1077,21 @@ class _AddHotelScreenState extends State<AddHotelScreen> {
         // Upload images first if any are selected
         List<String> imageUrls = [];
         if (_selectedImageFiles.isNotEmpty) {
-          final apiService = ApiService();
+          final apiService = ApiService.instance;
           
-          // Get and set the authentication token
-          final prefs = await SharedPreferences.getInstance();
-          final token = prefs.getString('auth_token');
-          if (token != null) {
-            apiService.setToken(token);
-          } else {
-            throw Exception('Authentication token not found. Please log in again.');
+          // Convert File objects to the new format expected by the API
+          List<Map<String, dynamic>> imageData = [];
+          for (int i = 0; i < _selectedImageFiles.length; i++) {
+            final file = _selectedImageFiles[i];
+            final bytes = await file.readAsBytes();
+            final fileName = file.name;
+            imageData.add({
+              'name': fileName,
+              'bytes': bytes,
+            });
           }
           
-          imageUrls = await apiService.uploadHotelImages(_selectedImageFiles);
+          imageUrls = await apiService.uploadHotelImages(imageData, hotelName: _nameController.text.trim());
           
           setState(() {
             _uploadedImageUrls = imageUrls;

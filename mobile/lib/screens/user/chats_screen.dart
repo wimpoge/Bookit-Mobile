@@ -7,6 +7,7 @@ import '../../blocs/bookings/bookings_bloc.dart';
 import '../../blocs/auth/auth_bloc.dart';
 import '../../models/booking.dart';
 import 'package:intl/intl.dart';
+import '../../widgets/simple_ai_chat.dart';
 
 class ChatsScreen extends StatefulWidget {
   const ChatsScreen({Key? key}) : super(key: key);
@@ -15,11 +16,33 @@ class ChatsScreen extends StatefulWidget {
   State<ChatsScreen> createState() => _ChatsScreenState();
 }
 
-class _ChatsScreenState extends State<ChatsScreen> {
+class _ChatsScreenState extends State<ChatsScreen> with TickerProviderStateMixin {
+  final GlobalKey<SimpleAIChatState> _aiChatKey = GlobalKey<SimpleAIChatState>();
+  bool _isAiChatVisible = false;
+  AnimationController? _animationController;
+  Animation<double>? _heightAnimation;
+
   @override
   void initState() {
     super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 200), // Faster animation
+      vsync: this,
+    );
+    _heightAnimation = Tween<double>(
+      begin: 0.06, // Smaller minimized state
+      end: 0.6,    // Reduced expanded state height
+    ).animate(CurvedAnimation(
+      parent: _animationController!,
+      curve: Curves.fastOutSlowIn, // Better curve for performance
+    ));
     _loadBookingsData();
+  }
+
+  @override
+  void dispose() {
+    _animationController?.dispose();
+    super.dispose();
   }
 
   void _loadBookingsData() {
@@ -59,11 +82,43 @@ class _ChatsScreenState extends State<ChatsScreen> {
               fontWeight: FontWeight.bold,
             ),
           ),
-          backgroundColor: Colors.white,
           elevation: 0,
-          foregroundColor: Colors.black87,
+          actions: [
+            Container(
+              margin: const EdgeInsets.only(right: 8, top: 8, bottom: 8),
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _isAiChatVisible = true;
+                  });
+                  _animationController?.forward(); // Start expanded
+                },
+                icon: const Icon(Icons.smart_toy, size: 18),
+                label: Text(
+                  'Ask AI',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
-        body: _buildBody(),
+        body: Stack(
+          children: [
+            _buildBody(),
+            if (_isAiChatVisible) _buildAIChatOverlay(),
+          ],
+        ),
       ),
     );
   }
@@ -80,10 +135,11 @@ class _ChatsScreenState extends State<ChatsScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(
-                  Icons.error_outline,
-                  size: 64,
-                  color: Colors.red,
+                Image.asset(
+                  'assets/images/500.png',
+                  width: 120,
+                  height: 120,
+                  fit: BoxFit.contain,
                 ),
                 const SizedBox(height: 16),
                 Text(
@@ -132,26 +188,19 @@ class _ChatsScreenState extends State<ChatsScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
-                    Icons.chat_outlined,
-                    size: 64,
-                    color: Colors.grey,
+                  Image.asset(
+                    'assets/images/No Chats Found.png',
+                    width: 120,
+                    height: 120,
+                    fit: BoxFit.contain,
                   ),
                   const SizedBox(height: 16),
-                  Text(
-                    'No Chats Available',
-                    style: GoogleFonts.poppins(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
                   Text(
                     'Chat with hotel owners will appear here\nonce you have confirmed bookings.',
                     textAlign: TextAlign.center,
                     style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      color: Colors.grey[600],
+                      fontSize: 16,
+                      color: Theme.of(context).colorScheme.onBackground.withOpacity(0.7),
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -309,4 +358,143 @@ class _ChatsScreenState extends State<ChatsScreen> {
         return 'CANCELLED';
     }
   }
+
+  Widget _buildAIChatOverlay() {
+    if (_heightAnimation == null) {
+      return const SizedBox.shrink();
+    }
+    
+    return AnimatedBuilder(
+      animation: _heightAnimation!,
+      builder: (context, child) {
+        final screenHeight = MediaQuery.of(context).size.height;
+        final height = screenHeight * _heightAnimation!.value;
+        final isMinimized = _heightAnimation!.value < 0.3;
+        
+        return Positioned(
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: height.clamp(0, screenHeight - MediaQuery.of(context).viewPadding.top - 20), // Ensure it doesn't overflow top
+          child: GestureDetector(
+            onVerticalDragUpdate: (details) {
+              // Optimized drag tracking with less frequent updates
+              if (_animationController != null && details.delta.dy.abs() > 1.0) {
+                final dragDelta = -details.delta.dy / screenHeight;
+                final newValue = (_animationController!.value + dragDelta * 2.0).clamp(0.0, 1.0); // 2x sensitivity for smoother feel
+                _animationController!.value = newValue;
+              }
+            },
+            onVerticalDragEnd: (details) {
+              // Snap to nearest position with velocity consideration
+              if (_animationController != null) {
+                final velocity = details.velocity.pixelsPerSecond.dy;
+                if (velocity > 300) {
+                  // Fast swipe down = minimize
+                  _animationController!.animateTo(0.0, duration: const Duration(milliseconds: 150));
+                } else if (velocity < -300) {
+                  // Fast swipe up = expand  
+                  _animationController!.animateTo(1.0, duration: const Duration(milliseconds: 150));
+                } else {
+                  // Slow drag = snap to nearest
+                  if (_animationController!.value < 0.5) {
+                    _animationController!.animateTo(0.0, duration: const Duration(milliseconds: 150));
+                  } else {
+                    _animationController!.animateTo(1.0, duration: const Duration(milliseconds: 150));
+                  }
+                }
+              }
+            },
+            child: Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, -2),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  // Drag handle area with title when minimized
+                  Container(
+                    width: double.infinity,
+                    height: isMinimized ? 50 : 30,
+                    color: Colors.transparent,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: isMinimized 
+                        ? Row(
+                            children: [
+                              Container(
+                                width: 24,
+                                height: 24,
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Icon(
+                                  Icons.smart_toy,
+                                  color: Theme.of(context).colorScheme.onPrimary,
+                                  size: 14,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  'AI Assistant',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: Theme.of(context).colorScheme.onSurface,
+                                  ),
+                                ),
+                              ),
+                              Container(
+                                width: 30,
+                                height: 4,
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                              ),
+                            ],
+                          )
+                        : Center(
+                            child: Container(
+                              width: 50,
+                              height: 4,
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                          ),
+                  ),
+                  if (!isMinimized)
+                    Expanded(
+                      child: SimpleAIChat(
+                        key: _aiChatKey,
+                        onClose: () {
+                          _aiChatKey.currentState?.clearChat();
+                          setState(() {
+                            _isAiChatVisible = false;
+                          });
+                          _animationController?.reset();
+                        },
+                      ),
+                    ),
+                  if (isMinimized)
+                    const SizedBox.shrink(), // Just show the drag handle when minimized
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
 }

@@ -6,10 +6,45 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../blocs/auth/auth_bloc.dart';
 import '../../blocs/theme/theme_bloc.dart';
 import '../../models/user.dart';
+import '../../models/user_statistics.dart';
+import '../../services/api_service.dart';
 import '../../widgets/edit_profile_bottom_sheet.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  UserStatistics? _userStats;
+  bool _isLoadingStats = true;
+  final ApiService _apiService = ApiService();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserStatistics();
+  }
+
+  Future<void> _loadUserStatistics() async {
+    try {
+      final stats = await _apiService.getUserStatistics();
+      if (mounted) {
+        setState(() {
+          _userStats = stats;
+          _isLoadingStats = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingStats = false;
+        });
+      }
+    }
+  }
 
   void _showEditProfileBottomSheet(BuildContext context, User user) {
     showModalBottomSheet(
@@ -121,7 +156,7 @@ class ProfileScreen extends StatelessWidget {
           const SizedBox(height: 32),
 
           // Stats cards
-          _buildStatsCards(context),
+          _buildStatsCards(context, _userStats, _isLoadingStats),
 
           const SizedBox(height: 32),
 
@@ -242,7 +277,7 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStatsCards(BuildContext context) {
+  Widget _buildStatsCards(BuildContext context, UserStatistics? stats, bool isLoading) {
     return Row(
       children: [
         Expanded(
@@ -250,7 +285,7 @@ class ProfileScreen extends StatelessWidget {
             context,
             icon: Icons.hotel,
             title: 'Bookings',
-            subtitle: '12',
+            subtitle: isLoading ? '...' : (stats?.totalBookings.toString() ?? '0'),
             color: Colors.blue,
           ),
         ),
@@ -260,7 +295,7 @@ class ProfileScreen extends StatelessWidget {
             context,
             icon: Icons.location_on,
             title: 'Countries',
-            subtitle: '8',
+            subtitle: isLoading ? '...' : (stats?.countriesVisited.toString() ?? '0'),
             color: Colors.green,
           ),
         ),
@@ -270,7 +305,7 @@ class ProfileScreen extends StatelessWidget {
             context,
             icon: Icons.star,
             title: 'Reviews',
-            subtitle: '24',
+            subtitle: isLoading ? '...' : (stats?.totalReviews.toString() ?? '0'),
             color: Colors.orange,
           ),
         ),
@@ -347,6 +382,14 @@ class ProfileScreen extends StatelessWidget {
               if (authState is AuthAuthenticated) {
                 _showEditProfileBottomSheet(context, authState.user);
               }
+            },
+          ),
+          SettingsItem(
+            icon: Icons.favorite_outline,
+            title: 'Favorite Hotels',
+            subtitle: 'View your favorite hotels',
+            onTap: () {
+              context.go('/profile/favorites');
             },
           ),
           SettingsItem(
@@ -527,7 +570,16 @@ class ProfileScreen extends StatelessWidget {
 
           return Column(
             children: [
-              ListTile(
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: item.onTap,
+                  splashColor: Colors.transparent,
+                  hoverColor: Colors.transparent,
+                  highlightColor: Colors.transparent,
+                  child: ListTile(
+                    splashColor: Colors.transparent,
+                    hoverColor: Colors.transparent,
                 leading: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
@@ -566,7 +618,9 @@ class ProfileScreen extends StatelessWidget {
                           .onSurface
                           .withOpacity(0.4),
                     ),
-                onTap: item.onTap,
+                    onTap: null,
+                  ),
+                ),
               ),
               if (!isLast)
                 Divider(

@@ -3,9 +3,9 @@ import 'chat_message.dart';
 import 'hotel.dart';
 
 class ChatConversation extends Equatable {
-  final int id;
-  final int hotelId;
-  final int userId;
+  final String id;
+  final String hotelId;
+  final String userId;
   final Hotel hotel;
   final String guestName;
   final ChatMessage lastMessage;
@@ -27,9 +27,9 @@ class ChatConversation extends Equatable {
 
   factory ChatConversation.fromJson(Map<String, dynamic> json) {
     return ChatConversation(
-      id: json['id'] ?? 0,
-      hotelId: json['hotel_id'] ?? 0,
-      userId: json['user_id'] ?? 0,
+      id: (json['id'] ?? '0').toString(),
+      hotelId: (json['hotel_id'] ?? '0').toString(),
+      userId: (json['user_id'] ?? '0').toString(),
       hotel: Hotel.fromJson(json['hotel'] ?? {}),
       guestName: json['guest_name'] ?? 'Guest',
       lastMessage: ChatMessage.fromJson(json['last_message'] ?? {}),
@@ -55,9 +55,9 @@ class ChatConversation extends Equatable {
   }
 
   ChatConversation copyWith({
-    int? id,
-    int? hotelId,
-    int? userId,
+    String? id,
+    String? hotelId,
+    String? userId,
     Hotel? hotel,
     String? guestName,
     ChatMessage? lastMessage,

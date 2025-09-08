@@ -31,7 +31,7 @@ class _OwnerReviewsScreenState extends State<OwnerReviewsScreen> {
   int _totalUnreplied = 0;
   
   // Filters
-  int? _selectedHotelId;
+  String? _selectedHotelId;
   int? _selectedRating;
   bool _showOnlyNeedsReply = false;
   String _sortBy = 'newest';
@@ -119,7 +119,7 @@ class _OwnerReviewsScreenState extends State<OwnerReviewsScreen> {
     _loadReviews(page: 1);
   }
 
-  Future<void> _replyToReview(int reviewId, String reply) async {
+  Future<void> _replyToReview(String reviewId, String reply) async {
     try {
       await _apiService.put('/reviews/$reviewId/reply', {
         'owner_reply': reply,
@@ -454,19 +454,19 @@ class _OwnerReviewsScreenState extends State<OwnerReviewsScreen> {
                 ),
               ),
               const SizedBox(height: 8),
-              DropdownButtonFormField<int?>(
+              DropdownButtonFormField<String?>(
                 value: _selectedHotelId,
                 decoration: const InputDecoration(
                   border: OutlineInputBorder(),
                   hintText: 'All Hotels',
                 ),
                 items: [
-                  const DropdownMenuItem<int?>(
+                  const DropdownMenuItem<String?>(
                     value: null,
                     child: Text('All Hotels'),
                   ),
-                  ..._hotels.map((hotel) => DropdownMenuItem<int?>(
-                        value: hotel['id'],
+                  ..._hotels.map((hotel) => DropdownMenuItem<String?>(
+                        value: hotel['id'].toString(),
                         child: Text(hotel['name']),
                       )),
                 ],

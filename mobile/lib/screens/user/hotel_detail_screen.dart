@@ -12,7 +12,7 @@ import '../../widgets/booking_bottom_sheet.dart';
 import '../../services/api_service.dart';
 
 class HotelDetailScreen extends StatefulWidget {
-  final int hotelId;
+  final String hotelId;
 
   const HotelDetailScreen({
     Key? key,
@@ -26,6 +26,8 @@ class HotelDetailScreen extends StatefulWidget {
 class _HotelDetailScreenState extends State<HotelDetailScreen> {
   PageController _pageController = PageController();
   int _currentImageIndex = 0;
+  bool _isFavorite = false;
+  bool _isCheckingFavorite = true;
 
   @override
   void initState() {
@@ -36,6 +38,68 @@ class _HotelDetailScreenState extends State<HotelDetailScreen> {
     context
         .read<ReviewsBloc>()
         .add(HotelReviewsLoadEvent(hotelId: widget.hotelId));
+    _checkFavoriteStatus();
+  }
+
+  Future<void> _checkFavoriteStatus() async {
+    try {
+      final apiService = ApiService();
+      final isFavorite = await apiService.isHotelFavorite(widget.hotelId);
+      if (mounted) {
+        setState(() {
+          _isFavorite = isFavorite;
+          _isCheckingFavorite = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isCheckingFavorite = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _toggleFavorite() async {
+    try {
+      final apiService = ApiService();
+      if (_isFavorite) {
+        await apiService.removeHotelFromFavorites(widget.hotelId);
+        if (mounted) {
+          setState(() {
+            _isFavorite = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Hotel removed from favorites'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      } else {
+        await apiService.addHotelToFavorites(widget.hotelId);
+        if (mounted) {
+          setState(() {
+            _isFavorite = true;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Hotel added to favorites'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -258,8 +322,11 @@ class _HotelDetailScreenState extends State<HotelDetailScreen> {
                 shape: BoxShape.circle,
               ),
               child: IconButton(
-                icon: const Icon(Icons.favorite_border, color: Colors.white),
-                onPressed: () {},
+                icon: Icon(
+                  _isFavorite ? Icons.favorite : Icons.favorite_border,
+                  color: _isFavorite ? Colors.red : Colors.white,
+                ),
+                onPressed: _isCheckingFavorite ? null : _toggleFavorite,
               ),
             ),
             Container(
@@ -416,6 +483,7 @@ class _HotelDetailScreenState extends State<HotelDetailScreen> {
                   const SizedBox(height: 8),
                   Text(
                     hotel.description!,
+                    textAlign: TextAlign.justify,
                     style: GoogleFonts.poppins(
                       fontSize: 14,
                       height: 1.5,
@@ -799,10 +867,14 @@ class _HotelDetailScreenState extends State<HotelDetailScreen> {
       return imageUrl; // Already a full URL
     }
     
-    // Remove leading slash if present
-    final cleanUrl = imageUrl.startsWith('/') ? imageUrl.substring(1) : imageUrl;
+    // Backend serves static files directly without /api prefix
+    // e.g., imageUrl = "/uploads/hotels/filename.jpg"
+    final baseUrl = ApiService.baseUrl.replaceAll('/api', '');
+    final fullUrl = imageUrl.startsWith('/') 
+        ? '$baseUrl$imageUrl' 
+        : '$baseUrl/$imageUrl';
     
-    // Construct full URL using the base URL from ApiService
-    return '${ApiService.baseUrl.replaceAll('/api', '')}/$cleanUrl';
+    print('HotelDetail: Converting image URL: $imageUrl → $fullUrl');
+    return fullUrl;
   }
 }

@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
 import '../models/hotel.dart';
+import '../models/room_type.dart';
 import '../blocs/bookings/bookings_bloc.dart';
 import 'custom_button.dart';
 
@@ -24,6 +25,7 @@ class _BookingBottomSheetState extends State<BookingBottomSheet> {
   DateTime? _checkInDate;
   DateTime? _checkOutDate;
   int _guests = 1;
+  RoomType? _selectedRoomType;
 
   @override
   Widget build(BuildContext context) {
@@ -167,6 +169,21 @@ class _BookingBottomSheetState extends State<BookingBottomSheet> {
                     ),
                     
                     const SizedBox(height: 24),
+                    
+                    // Room Type Selection
+                    if (widget.hotel.roomTypes.isNotEmpty) ...[
+                      Text(
+                        'Room Type',
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.onBackground,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      _buildRoomTypeDropdown(),
+                      const SizedBox(height: 16),
+                    ],
                     
                     // Check-in date
                     Text(
@@ -355,11 +372,11 @@ class _BookingBottomSheetState extends State<BookingBottomSheet> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
-                                  '\$${widget.hotel.pricePerNight.toStringAsFixed(0)} x ${_numberOfNights} nights',
+                                  '\$${_currentPricePerNight.toStringAsFixed(0)} x ${_numberOfNights} nights',
                                   style: GoogleFonts.poppins(fontSize: 14),
                                 ),
                                 Text(
-                                  '\$${(_numberOfNights * widget.hotel.pricePerNight).toStringAsFixed(0)}',
+                                  '\$${(_numberOfNights * _currentPricePerNight).toStringAsFixed(0)}',
                                   style: GoogleFonts.poppins(fontSize: 14),
                                 ),
                               ],
@@ -376,7 +393,7 @@ class _BookingBottomSheetState extends State<BookingBottomSheet> {
                                   ),
                                 ),
                                 Text(
-                                  '\$${(_numberOfNights * widget.hotel.pricePerNight).toStringAsFixed(0)}',
+                                  '\$${(_numberOfNights * _currentPricePerNight).toStringAsFixed(0)}',
                                   style: GoogleFonts.poppins(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
@@ -461,6 +478,7 @@ class _BookingBottomSheetState extends State<BookingBottomSheet> {
     if (_canBook) {
       context.read<BookingsBloc>().add(BookingCreateEvent(bookingData: {
         'hotel_id': widget.hotel.id,
+        'room_type_id': _selectedRoomType?.id,
         'check_in_date': _checkInDate!.toIso8601String(),
         'check_out_date': _checkOutDate!.toIso8601String(),
         'guests': _guests,
@@ -469,7 +487,7 @@ class _BookingBottomSheetState extends State<BookingBottomSheet> {
   }
 
   bool get _canBook {
-    return _checkInDate != null && _checkOutDate != null;
+    return _checkInDate != null && _checkOutDate != null && (_selectedRoomType != null || widget.hotel.roomTypes.isEmpty);
   }
 
   int get _numberOfNights {
@@ -477,5 +495,271 @@ class _BookingBottomSheetState extends State<BookingBottomSheet> {
       return _checkOutDate!.difference(_checkInDate!).inDays;
     }
     return 0;
+  }
+
+  double get _currentPricePerNight {
+    return _selectedRoomType?.basePrice ?? widget.hotel.pricePerNight;
+  }
+
+  Widget _buildRoomTypeDropdown() {
+    return GestureDetector(
+      onTap: () => _showRoomTypeSelector(context),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Theme.of(context).inputDecorationTheme.fillColor,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: _selectedRoomType != null
+                ? Theme.of(context).colorScheme.primary.withOpacity(0.5)
+                : Colors.transparent,
+            width: 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.bed_outlined,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _selectedRoomType?.name ?? 'Select room type',
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      color: _selectedRoomType != null
+                          ? Theme.of(context).colorScheme.onSurface
+                          : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                      fontWeight: _selectedRoomType != null ? FontWeight.w500 : FontWeight.normal,
+                    ),
+                  ),
+                  if (_selectedRoomType != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      '\$${_selectedRoomType!.basePrice.toStringAsFixed(0)}/night • ${_selectedRoomType!.guestCapacityText}',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: Theme.of(context).colorScheme.primary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            Icon(
+              Icons.keyboard_arrow_down,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showRoomTypeSelector(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.6,
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
+          ),
+        ),
+        child: Column(
+          children: [
+            // Handle
+            Container(
+              margin: const EdgeInsets.only(top: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            
+            // Header
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                children: [
+                  Text(
+                    'Select Room Type',
+                    style: GoogleFonts.poppins(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onBackground,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+            ),
+            
+            // Room Types List
+            Expanded(
+              child: ListView.separated(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                itemCount: widget.hotel.roomTypes.length,
+                separatorBuilder: (context, index) => const SizedBox(height: 12),
+                itemBuilder: (context, index) {
+                  final roomType = widget.hotel.roomTypes[index];
+                  final isSelected = _selectedRoomType?.id == roomType.id;
+                  
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _selectedRoomType = roomType;
+                      });
+                      Navigator.of(context).pop();
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: isSelected 
+                            ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
+                            : Theme.of(context).cardColor,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isSelected
+                              ? Theme.of(context).colorScheme.primary
+                              : Theme.of(context).colorScheme.outline.withOpacity(0.3),
+                          width: isSelected ? 2 : 1,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  roomType.name,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: isSelected
+                                        ? Theme.of(context).colorScheme.primary
+                                        : Theme.of(context).colorScheme.onSurface,
+                                  ),
+                                ),
+                              ),
+                              if (isSelected)
+                                Icon(
+                                  Icons.check_circle,
+                                  color: Theme.of(context).colorScheme.primary,
+                                  size: 20,
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Text(
+                                '\$${roomType.basePrice.toStringAsFixed(0)}',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                              ),
+                              Text(
+                                '/night',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14,
+                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                                ),
+                              ),
+                              const Spacer(),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.secondary.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  roomType.guestCapacityText,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 12,
+                                    color: Theme.of(context).colorScheme.secondary,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (roomType.description != null) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              roomType.description!,
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.bed,
+                                size: 14,
+                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                roomType.formattedBedInfo,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                                ),
+                              ),
+                              if (roomType.sizeSqm != null) ...[
+                                const SizedBox(width: 16),
+                                Icon(
+                                  Icons.square_foot,
+                                  size: 14,
+                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  roomType.sizeText,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 12,
+                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

@@ -116,10 +116,11 @@ class _BookingsScreenState extends State<BookingsScreen> with TickerProviderStat
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: Theme.of(context).colorScheme.error,
+            Image.asset(
+              'assets/images/500.png',
+              width: 120,
+              height: 120,
+              fit: BoxFit.contain,
             ),
             const SizedBox(height: 16),
             Text(
@@ -204,23 +205,19 @@ class _BookingsScreenState extends State<BookingsScreen> with TickerProviderStat
   Widget _buildEmptyState(BookingListType type) {
     String title;
     String subtitle;
-    IconData icon;
 
     switch (type) {
       case BookingListType.current:
         title = 'No current bookings';
         subtitle = 'Your active stays will appear here';
-        icon = Icons.hotel;
         break;
       case BookingListType.past:
         title = 'No past bookings';
         subtitle = 'Your completed stays will appear here';
-        icon = Icons.history;
         break;
       case BookingListType.cancelled:
         title = 'No cancelled bookings';
         subtitle = 'Cancelled bookings will appear here';
-        icon = Icons.cancel_outlined;
         break;
     }
 
@@ -230,26 +227,18 @@ class _BookingsScreenState extends State<BookingsScreen> with TickerProviderStat
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              icon,
-              size: 64,
-              color: Theme.of(context).colorScheme.onBackground.withOpacity(0.3),
+            Image.asset(
+              'assets/images/No Bookings Found.png',
+              width: 120,
+              height: 120,
+              fit: BoxFit.contain,
             ),
             const SizedBox(height: 16),
             Text(
-              title,
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.onBackground,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
               subtitle,
               style: GoogleFonts.poppins(
-                fontSize: 14,
-                color: Theme.of(context).colorScheme.onBackground.withOpacity(0.6),
+                fontSize: 16,
+                color: Theme.of(context).colorScheme.onBackground.withOpacity(0.7),
               ),
               textAlign: TextAlign.center,
             ),

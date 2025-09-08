@@ -17,28 +17,16 @@ def get_user_bookings(
     db: Session = Depends(get_db)
 ):
     try:
-        print(f"Getting bookings for user {current_user.id}")
-        
-        # Test basic database connection
-        total_bookings = db.query(models.Booking).count()
-        print(f"Total bookings in database: {total_bookings}")
-        
         # Get user's bookings with hotel and review relationships
         bookings = db.query(models.Booking).filter(
             models.Booking.user_id == current_user.id
         ).all()
-        print(f"Found {len(bookings)} bookings for user {current_user.id}")
         
-        # If there are bookings, check if they have hotels loaded and set review status
+        # Filter valid bookings and set review status
         valid_bookings = []
         for booking in bookings:
-            print(f"Booking {booking.id}: hotel_id={booking.hotel_id}, hotel={booking.hotel}")
             # Skip bookings with missing hotel_id or hotel data
-            if booking.hotel_id is None:
-                print(f"Skipping booking {booking.id} - missing hotel_id")
-                continue
-            if booking.hotel is None:
-                print(f"Skipping booking {booking.id} - hotel not found")
+            if booking.hotel_id is None or booking.hotel is None:
                 continue
             
             # Check if booking has a review
@@ -49,12 +37,8 @@ def get_user_bookings(
             
             valid_bookings.append(booking)
         
-        print(f"Returning {len(valid_bookings)} valid bookings")
         return valid_bookings
     except Exception as e:
-        print(f"Error getting bookings: {e}")
-        import traceback
-        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error retrieving bookings: {str(e)}"

@@ -5,7 +5,7 @@ import 'package:intl/intl.dart';
 
 class OwnerReviewCard extends StatefulWidget {
   final Review review;
-  final Function(int reviewId, String reply) onReply;
+  final Function(String reviewId, String reply) onReply;
 
   const OwnerReviewCard({
     Key? key,

@@ -1,9 +1,9 @@
 import 'package:equatable/equatable.dart';
 
 class ChatMessage extends Equatable {
-  final int id;
-  final int hotelId;
-  final int? userId;
+  final String id;
+  final String hotelId;
+  final String? userId;
   final String message;
   final bool isFromOwner;
   final bool isFromUser;
@@ -28,9 +28,9 @@ class ChatMessage extends Equatable {
     final isFromUser = json['is_from_user'] ?? !isFromOwner;
 
     return ChatMessage(
-      id: json['id'] ?? 0,
-      hotelId: json['hotel_id'] ?? 0,
-      userId: json['user_id'],
+      id: (json['id'] ?? '0').toString(),
+      hotelId: (json['hotel_id'] ?? '0').toString(),
+      userId: json['user_id']?.toString(),
       message: json['message'] ?? '',
       isFromOwner: isFromOwner,
       isFromUser: isFromUser,
@@ -57,9 +57,9 @@ class ChatMessage extends Equatable {
   }
 
   ChatMessage copyWith({
-    int? id,
-    int? hotelId,
-    int? userId,
+    String? id,
+    String? hotelId,
+    String? userId,
     String? message,
     bool? isFromOwner,
     bool? isFromUser,

@@ -8,7 +8,7 @@ abstract class ReviewsEvent extends Equatable {
 }
 
 class HotelReviewsLoadEvent extends ReviewsEvent {
-  final int hotelId;
+  final String hotelId;
 
   const HotelReviewsLoadEvent({required this.hotelId});
 
@@ -26,7 +26,7 @@ class ReviewCreateEvent extends ReviewsEvent {
 }
 
 class ReviewUpdateEvent extends ReviewsEvent {
-  final int reviewId;
+  final String reviewId;
   final Map<String, dynamic> reviewData;
 
   const ReviewUpdateEvent({
@@ -39,7 +39,7 @@ class ReviewUpdateEvent extends ReviewsEvent {
 }
 
 class ReviewReplyEvent extends ReviewsEvent {
-  final int reviewId;
+  final String reviewId;
   final String reply;
 
   const ReviewReplyEvent({
@@ -52,7 +52,7 @@ class ReviewReplyEvent extends ReviewsEvent {
 }
 
 class ReviewDeleteEvent extends ReviewsEvent {
-  final int reviewId;
+  final String reviewId;
 
   const ReviewDeleteEvent({required this.reviewId});
 

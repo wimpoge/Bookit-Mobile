@@ -2,10 +2,10 @@ import 'dart:convert';
 import 'user.dart';
 
 class Review {
-  final int id;
-  final int? userId;
-  final int? hotelId;
-  final int bookingId;
+  final String id;
+  final String? userId;
+  final String? hotelId;
+  final String bookingId;
   final int rating;
   final String? comment;
   final String? ownerReply;
@@ -30,10 +30,10 @@ class Review {
 
   factory Review.fromJson(Map<String, dynamic> json) {
     return Review(
-      id: json['id'],
-      userId: json['user_id'],
-      hotelId: json['hotel_id'],
-      bookingId: json['booking_id'],
+      id: json['id'].toString(),
+      userId: json['user_id']?.toString(),
+      hotelId: json['hotel_id']?.toString(),
+      bookingId: json['booking_id'].toString(),
       rating: json['rating'],
       comment: json['comment'],
       ownerReply: json['owner_reply'],
@@ -63,10 +63,10 @@ class Review {
   String toJson() => jsonEncode(toMap());
 
   Review copyWith({
-    int? id,
-    int? userId,
-    int? hotelId,
-    int? bookingId,
+    String? id,
+    String? userId,
+    String? hotelId,
+    String? bookingId,
     int? rating,
     String? comment,
     String? ownerReply,
@@ -111,7 +111,7 @@ class Review {
 }
 
 class ReviewHotel {
-  final int id;
+  final String id;
   final String name;
   final String location;
   final String? imageUrl;
@@ -125,7 +125,7 @@ class ReviewHotel {
 
   factory ReviewHotel.fromJson(Map<String, dynamic> json) {
     return ReviewHotel(
-      id: json['id'],
+      id: json['id'].toString(),
       name: json['name'],
       location: json['location'],
       imageUrl: json['image_url'],

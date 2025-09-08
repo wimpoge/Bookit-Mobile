@@ -18,13 +18,18 @@ class NavigationService {
     final currentContext = context;
     if (currentContext != null && currentContext.mounted) {
       try {
-        currentContext.go('/auth');
+        // Use pushReplacement to force navigation and clear the stack
+        currentContext.pushReplacement('/auth');
       } catch (e) {
-        // Fallback to Navigator if GoRouter fails
-        Navigator.of(currentContext).pushNamedAndRemoveUntil(
-          '/auth', 
-          (route) => false
-        );
+        try {
+          currentContext.go('/auth');
+        } catch (e2) {
+          // Fallback to Navigator if GoRouter fails
+          Navigator.of(currentContext).pushNamedAndRemoveUntil(
+            '/auth', 
+            (route) => false
+          );
+        }
       }
     }
   }

@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 import '../models/hotel.dart';
+import '../services/api_service.dart';
 
 class OwnerHotelCard extends StatelessWidget {
   final Hotel hotel;
@@ -10,6 +11,7 @@ class OwnerHotelCard extends StatelessWidget {
   final VoidCallback? onEdit;
   final VoidCallback? onViewReviews;
   final VoidCallback? onDelete;
+  final VoidCallback? onDiscount;
 
   const OwnerHotelCard({
     Key? key,
@@ -18,6 +20,7 @@ class OwnerHotelCard extends StatelessWidget {
     this.onEdit,
     this.onViewReviews,
     this.onDelete,
+    this.onDiscount,
   }) : super(key: key);
 
   @override
@@ -36,11 +39,14 @@ class OwnerHotelCard extends StatelessWidget {
             ),
           ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Main content
-            Row(
+        child: SizedBox(
+          width: double.infinity,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Main content
+              Row(
               children: [
                 // Hotel image
                 ClipRRect(
@@ -53,7 +59,7 @@ class OwnerHotelCard extends StatelessWidget {
                     height: 140,
                     child: hotel.hasImages
                         ? CachedNetworkImage(
-                            imageUrl: hotel.mainImage,
+                            imageUrl: _getFullImageUrl(hotel.mainImage),
                             fit: BoxFit.cover,
                             placeholder: (context, url) => Container(
                               color: Colors.grey[300],
@@ -174,14 +180,58 @@ class OwnerHotelCard extends StatelessWidget {
                         
                         const SizedBox(height: 4),
                         
-                        // Price
-                        Text(
-                          '\$${hotel.pricePerNight.toStringAsFixed(0)}/night',
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
+                        // Price with discount display
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (hotel.isDeal && hotel.discountPrice != null) ...[
+                              // Discounted price
+                              Text(
+                                '\$${hotel.discountPrice!.toStringAsFixed(0)}/night',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                              ),
+                              // Original price crossed out
+                              Text(
+                                '\$${hotel.pricePerNight.toStringAsFixed(0)}',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                                  decoration: TextDecoration.lineThrough,
+                                ),
+                              ),
+                              // Discount percentage
+                              if (hotel.discountPercentage != null)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.orange,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    '${hotel.discountPercentage!.toStringAsFixed(0)}% OFF',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                            ] else ...[
+                              // Regular price
+                              Text(
+                                '\$${hotel.pricePerNight.toStringAsFixed(0)}/night',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                       ],
                     ),
@@ -203,22 +253,25 @@ class OwnerHotelCard extends StatelessWidget {
               child: Row(
                 children: [
                   Expanded(
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.calendar_today_outlined,
-                          size: 14,
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Created ${_formatDate(hotel.createdAt)}',
-                          style: GoogleFonts.poppins(
-                            fontSize: 10,
+                    child: Tooltip(
+                      message: '${_formatDate(hotel.createdAt)} (${_formatExactDate(hotel.createdAt)})',
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.calendar_today_outlined,
+                            size: 14,
                             color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 4),
+                          Text(
+                            'Created ${_formatDate(hotel.createdAt)}',
+                            style: GoogleFonts.poppins(
+                              fontSize: 10,
+                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                   
@@ -233,6 +286,20 @@ class OwnerHotelCard extends StatelessWidget {
                             color: Theme.of(context).colorScheme.primary,
                           ),
                           onPressed: onEdit,
+                          padding: const EdgeInsets.all(4),
+                          constraints: const BoxConstraints(),
+                        ),
+                      
+                      if (onDiscount != null)
+                        IconButton(
+                          icon: Icon(
+                            Icons.local_offer_outlined,
+                            size: 18,
+                            color: hotel.isDeal 
+                                ? Colors.orange 
+                                : Theme.of(context).colorScheme.primary,
+                          ),
+                          onPressed: onDiscount,
                           padding: const EdgeInsets.all(4),
                           constraints: const BoxConstraints(),
                         ),
@@ -265,6 +332,7 @@ class OwnerHotelCard extends StatelessWidget {
               ),
             ),
           ],
+          ),
         ),
       ),
     );
@@ -272,24 +340,52 @@ class OwnerHotelCard extends StatelessWidget {
 
   String _formatDate(DateTime date) {
     final now = DateTime.now();
-    final difference = now.difference(date).inDays;
+    final difference = now.difference(date);
     
-    if (difference == 0) {
-      return 'today';
-    } else if (difference == 1) {
+    if (difference.inMinutes < 1) {
+      return 'just now';
+    } else if (difference.inHours < 1) {
+      final minutes = difference.inMinutes;
+      return minutes == 1 ? '1 minute ago' : '$minutes minutes ago';
+    } else if (difference.inDays < 1) {
+      final hours = difference.inHours;
+      return hours == 1 ? '1 hour ago' : '$hours hours ago';
+    } else if (difference.inDays == 1) {
       return 'yesterday';
-    } else if (difference < 7) {
-      return '$difference days ago';
-    } else if (difference < 30) {
-      final weeks = (difference / 7).floor();
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays} days ago';
+    } else if (difference.inDays < 30) {
+      final weeks = (difference.inDays / 7).floor();
       return weeks == 1 ? '1 week ago' : '$weeks weeks ago';
-    } else if (difference < 365) {
-      final months = (difference / 30).floor();
+    } else if (difference.inDays < 365) {
+      final months = (difference.inDays / 30).floor();
       return months == 1 ? '1 month ago' : '$months months ago';
     } else {
-      final years = (difference / 365).floor();
+      final years = (difference.inDays / 365).floor();
       return years == 1 ? '1 year ago' : '$years years ago';
     }
+  }
+
+  String _formatExactDate(DateTime date) {
+    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year} at ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+  }
+
+  String _getFullImageUrl(String imageUrl) {
+    if (imageUrl.startsWith('http')) {
+      return imageUrl;
+    }
+    
+    // Get base URL and ensure it doesn't end with /api
+    String baseUrl = ApiService.baseUrl;
+    if (baseUrl.endsWith('/api')) {
+      baseUrl = baseUrl.substring(0, baseUrl.length - 4);
+    }
+    
+    // Ensure imageUrl starts with / for proper concatenation
+    String normalizedImageUrl = imageUrl.startsWith('/') ? imageUrl : '/$imageUrl';
+    
+    final fullUrl = '$baseUrl$normalizedImageUrl';
+    return fullUrl;
   }
 }
 

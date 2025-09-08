@@ -45,7 +45,7 @@ def add_payment_method(
 
 @router.put("/methods/{method_id}", response_model=schemas.PaymentMethodResponse)
 def update_payment_method(
-    method_id: int,
+    method_id: str,
     payment_method_update: dict,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -76,7 +76,7 @@ def update_payment_method(
 
 @router.delete("/methods/{method_id}")
 def delete_payment_method(
-    method_id: int,
+    method_id: str,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):

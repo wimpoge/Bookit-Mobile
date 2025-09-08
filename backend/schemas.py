@@ -17,7 +17,7 @@ class OwnerCreate(UserBase):
     role: UserRole = UserRole.OWNER
 
 class UserResponse(UserBase):
-    id: int
+    id: str
     role: str
     is_active: bool
     profile_image: Optional[str] = None
@@ -33,6 +33,13 @@ class UserLogin(BaseModel):
 class GoogleLogin(BaseModel):
     id_token: str
 
+class ForgotPassword(BaseModel):
+    email: EmailStr
+
+class ResetPassword(BaseModel):
+    token: str
+    new_password: str
+
 class Token(BaseModel):
     access_token: str
     token_type: str
@@ -45,6 +52,9 @@ class HotelBase(BaseModel):
     city: str
     country: str
     price_per_night: float
+    discount_percentage: Optional[float] = 0.0
+    discount_price: Optional[float] = None
+    is_deal: Optional[bool] = False
     amenities: Optional[List[str]] = []
     total_rooms: int
     latitude: Optional[float] = None
@@ -60,6 +70,9 @@ class HotelUpdate(BaseModel):
     city: Optional[str] = None
     country: Optional[str] = None
     price_per_night: Optional[float] = None
+    discount_percentage: Optional[float] = None
+    discount_price: Optional[float] = None
+    is_deal: Optional[bool] = None
     amenities: Optional[List[str]] = None
     total_rooms: Optional[int] = None
     images: Optional[List[str]] = None
@@ -67,11 +80,11 @@ class HotelUpdate(BaseModel):
     longitude: Optional[float] = None
 
 class HotelResponse(HotelBase):
-    id: int
+    id: str
     rating: float
     images: List[str]
     available_rooms: int
-    owner_id: int
+    owner_id: str
     owner_name: Optional[str] = None
     created_at: datetime
     
@@ -87,7 +100,7 @@ class HotelResponse(HotelBase):
         from_attributes = True
 
 class BookingBase(BaseModel):
-    hotel_id: int
+    hotel_id: str
     check_in_date: datetime
     check_out_date: datetime
     guests: int
@@ -106,16 +119,16 @@ class ReviewBase(BaseModel):
     comment: Optional[str] = None
 
 class ReviewCreate(ReviewBase):
-    booking_id: int
+    booking_id: str
 
 class ReviewUpdate(BaseModel):
     owner_reply: str
 
 class ReviewResponse(ReviewBase):
-    id: int
-    user_id: int
-    hotel_id: int
-    booking_id: int
+    id: str
+    user_id: str
+    hotel_id: str
+    booking_id: str
     owner_reply: Optional[str] = None
     created_at: datetime
     user: UserResponse
@@ -124,12 +137,12 @@ class ReviewResponse(ReviewBase):
         from_attributes = True
 
 class BookingResponse(BaseModel):
-    id: int
-    hotel_id: Optional[int] = None
+    id: str
+    hotel_id: Optional[str] = None
     check_in_date: datetime
     check_out_date: datetime
     guests: int
-    user_id: int
+    user_id: str
     total_price: float
     status: str
     qr_code: Optional[str] = None
@@ -150,8 +163,8 @@ class PaymentMethodCreate(PaymentMethodBase):
     is_default: Optional[bool] = False
 
 class PaymentMethodResponse(PaymentMethodBase):
-    id: int
-    user_id: int
+    id: str
+    user_id: str
     is_default: bool
     created_at: datetime
    
@@ -159,12 +172,12 @@ class PaymentMethodResponse(PaymentMethodBase):
         from_attributes = True
 
 class PaymentCreate(BaseModel):
-    booking_id: int
-    payment_method_id: int
+    booking_id: str
+    payment_method_id: str
     amount: float
 
 class PaymentResponse(BaseModel):
-    id: int
+    id: str
     amount: float
     currency: str
     status: str
@@ -182,9 +195,9 @@ class ChatMessageCreate(BaseModel):
     message: str
 
 class ChatMessageResponse(BaseModel):
-    id: int
-    user_id: int
-    hotel_id: int
+    id: str
+    user_id: str
+    hotel_id: str
     message: str
     is_from_user: bool
     is_from_owner: bool
@@ -196,13 +209,32 @@ class ChatMessageResponse(BaseModel):
         from_attributes = True
 
 class ChatConversationResponse(BaseModel):
-    hotel_id: int
-    user_id: int
+    hotel_id: str
+    user_id: str
     hotel: HotelResponse
     guest_name: str
     last_message: ChatMessageResponse
     unread_count: int
     has_unread_messages: bool
+    
+    class Config:
+        from_attributes = True
+
+class UserStatisticsResponse(BaseModel):
+    total_bookings: int
+    countries_visited: int
+    total_reviews: int
+    countries_list: List[str]
+    
+    class Config:
+        from_attributes = True
+
+class FavoriteHotelResponse(BaseModel):
+    id: str
+    user_id: str
+    hotel_id: str
+    hotel: HotelResponse
+    created_at: datetime
     
     class Config:
         from_attributes = True

@@ -7,10 +7,9 @@ from pathlib import Path
 import os
 from database import engine, get_db, init_database
 import models
-from routes import auth, users, hotels, bookings, payments, reviews, chat, analytics
+from routes import auth, users, hotels, bookings, payments, reviews, chat, analytics, favorites, ai_chat
 
 models.Base.metadata.create_all(bind=engine)
-init_database()
 
 app = FastAPI(
     title="Hotel Booking API",
@@ -34,12 +33,6 @@ app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 security = HTTPBearer()
 
-@app.middleware("http")
-async def log_requests(request, call_next):
-    print(f"Incoming request: {request.method} {request.url}")
-    response = await call_next(request)
-    print(f"Response status: {response.status_code}")
-    return response
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(users.router, prefix="/api/users", tags=["Users"])
 app.include_router(hotels.router, prefix="/api/hotels", tags=["Hotels"])
@@ -48,6 +41,12 @@ app.include_router(payments.router, prefix="/api/payments", tags=["Payments"])
 app.include_router(reviews.router, prefix="/api/reviews", tags=["Reviews"])
 app.include_router(chat.router, prefix="/api/chat", tags=["Chat"])
 app.include_router(analytics.router, prefix="/api/analytics", tags=["Analytics"])
+app.include_router(favorites.router, prefix="/api/favorites", tags=["Favorites"])
+app.include_router(ai_chat.router, prefix="/api", tags=["AI Chat"])
+
+@app.get("/api/hotels/direct")
+def get_hotels_direct():
+    return [{"id": "1", "name": "Direct Hotel"}]
 
 @app.get("/")
 def read_root():

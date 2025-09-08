@@ -224,7 +224,6 @@ class BookingCard extends StatelessWidget {
   Widget _buildActionButtons(BuildContext context) {
     if (type == BookingListType.current) {
       // Debug QR code
-      print('Booking ${booking.id}: status=${booking.status}, qrCode=${booking.qrCode}');
       
       return Row(
         children: [
@@ -253,7 +252,6 @@ class BookingCard extends StatelessWidget {
           if (booking.qrCode != null) ...[
             ElevatedButton(
               onPressed: () {
-                print('QR Code button pressed: ${booking.qrCode}');
                 Navigator.push(
                   context,
                   MaterialPageRoute(

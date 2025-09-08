@@ -11,13 +11,20 @@ class AuthService {
 
   static const String _tokenKey = 'auth_token';
   static const String _userKey = 'user_data';
+  
+  Function()? _onTokenExpiredCallback;
 
   AuthService(this._apiService, this._prefs) {
     _apiService.setTokenExpiredCallback(_handleTokenExpired);
   }
 
+  void setTokenExpiredCallback(Function() callback) {
+    _onTokenExpiredCallback = callback;
+  }
+
   void _handleTokenExpired() {
     logout();
+    _onTokenExpiredCallback?.call();
     NavigationService.redirectToLogin();
     NavigationService.showSnackBar(
       'Your session has expired. Please log in again.',
@@ -90,12 +97,8 @@ class AuthService {
 
   Future<void> initializeToken() async {
     final token = await getToken();
-    print('AuthService: Initializing token. Token found: ${token != null}');
     if (token != null) {
-      print('AuthService: Setting token in API service: ${token.substring(0, 20)}...');
       _apiService.setToken(token);
-    } else {
-      print('AuthService: No stored token found');
     }
   }
 
@@ -111,54 +114,43 @@ class AuthService {
 
   Future<LoginResult> googleLogin() async {
     try {
-      print('AuthService: Starting Google login process...');
-      
       final googleAccount = await GoogleAuthService().signIn();
       if (googleAccount == null) {
-        print('AuthService: Google account is null - sign-in cancelled or failed');
         return LoginResult.failure("Google sign-in was cancelled or not available. Please use email/password login instead.");
       }
 
-      print('AuthService: Google account obtained: ${googleAccount.email}');
-      print('AuthService: Getting Google user data...');
-      
       final googleUserData = await GoogleUserData.fromGoogleSignInAccount(googleAccount);
       if (googleUserData == null || googleUserData.idToken == null) {
-        print('AuthService: Failed to get Google user data or ID token');
-        print('AuthService: GoogleUserData: $googleUserData');
-        print('AuthService: ID Token available: ${googleUserData?.idToken != null}');
         return LoginResult.failure("Failed to get Google user data");
       }
 
-      print('AuthService: Google user data obtained successfully');
-      print('AuthService: Email: ${googleUserData.email}');
-      print('AuthService: Name: ${googleUserData.name}');
-      print('AuthService: ID Token length: ${googleUserData.idToken?.length}');
-      
-      print('AuthService: Sending Google login request to backend...');
       final response = await _apiService.googleLogin(googleUserData.idToken!);
-      print('AuthService: Backend response received');
       
       final token = response['access_token'];
       final user = User.fromJson(response['user']);
 
-      print('AuthService: Storing token and user data...');
       await _prefs.setString(_tokenKey, token);
       await _prefs.setString(_userKey, user.toJson());
 
       _apiService.setToken(token);
-      print('AuthService: Google login completed successfully');
 
       return LoginResult.success(user);
     } catch (e) {
-      print('AuthService: Google login error: $e');
-      print('AuthService: Error type: ${e.runtimeType}');
       
       String errorMessage = e.toString();
       if (errorMessage.contains('MissingPluginException')) {
         errorMessage = "Google Sign-In is not available on this device. Please use email/password login instead.";
       }
       return LoginResult.failure(errorMessage);
+    }
+  }
+
+  Future<ForgotPasswordResult> forgotPassword(String email) async {
+    try {
+      await _apiService.forgotPassword(email);
+      return ForgotPasswordResult.success();
+    } catch (e) {
+      return ForgotPasswordResult.failure(e.toString());
     }
   }
 }
@@ -186,4 +178,15 @@ class RegisterResult {
       RegisterResult._(true, user, null);
   factory RegisterResult.failure(String error) =>
       RegisterResult._(false, null, error);
+}
+
+class ForgotPasswordResult {
+  final bool isSuccess;
+  final String? error;
+
+  ForgotPasswordResult._(this.isSuccess, this.error);
+
+  factory ForgotPasswordResult.success() => ForgotPasswordResult._(true, null);
+  factory ForgotPasswordResult.failure(String error) =>
+      ForgotPasswordResult._(false, error);
 }

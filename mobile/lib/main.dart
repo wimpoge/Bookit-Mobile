@@ -17,14 +17,12 @@ import 'blocs/chat/chat_bloc.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  print('Main: Starting app initialization...');
-  
   // Initialize services quickly without blocking
   final prefs = await SharedPreferences.getInstance();
   final apiService = ApiService();
+  // Set the singleton instance to the authenticated one
+  ApiService.setInstance(apiService);
   final authService = AuthService(apiService, prefs);
-
-  print('Main: Services initialized, starting app...');
 
   runApp(HotelBookingApp(
     authService: authService,

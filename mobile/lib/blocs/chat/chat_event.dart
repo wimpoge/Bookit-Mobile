@@ -8,7 +8,7 @@ abstract class ChatEvent extends Equatable {
 }
 
 class ChatLoadEvent extends ChatEvent {
-  final int hotelId;
+  final String hotelId;
 
   const ChatLoadEvent({required this.hotelId});
 
@@ -17,7 +17,7 @@ class ChatLoadEvent extends ChatEvent {
 }
 
 class ChatSendMessageEvent extends ChatEvent {
-  final int hotelId;
+  final String hotelId;
   final String message;
 
   const ChatSendMessageEvent({
@@ -30,7 +30,7 @@ class ChatSendMessageEvent extends ChatEvent {
 }
 
 class ChatOwnerReplyEvent extends ChatEvent {
-  final int hotelId;
+  final String hotelId;
   final String message;
 
   const ChatOwnerReplyEvent({
@@ -43,7 +43,7 @@ class ChatOwnerReplyEvent extends ChatEvent {
 }
 
 class ChatDeleteMessageEvent extends ChatEvent {
-  final int messageId;
+  final String messageId;
 
   const ChatDeleteMessageEvent({required this.messageId});
 
@@ -56,8 +56,8 @@ class OwnerChatsLoadEvent extends ChatEvent {
 }
 
 class ChatMessagesLoadEvent extends ChatEvent {
-  final int hotelId;
-  final int? userId;
+  final String hotelId;
+  final String? userId;
 
   const ChatMessagesLoadEvent({
     required this.hotelId,
@@ -69,8 +69,8 @@ class ChatMessagesLoadEvent extends ChatEvent {
 }
 
 class ChatMessageSendEvent extends ChatEvent {
-  final int hotelId;
-  final int? userId;
+  final String hotelId;
+  final String? userId;
   final String message;
   final bool isFromOwner;
 
@@ -86,7 +86,7 @@ class ChatMessageSendEvent extends ChatEvent {
 }
 
 class ChatConnectWebSocketEvent extends ChatEvent {
-  final int hotelId;
+  final String hotelId;
   final String token;
 
   const ChatConnectWebSocketEvent({

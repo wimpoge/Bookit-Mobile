@@ -6,6 +6,7 @@ import '../services/navigation_service.dart';
 import '../blocs/auth/auth_bloc.dart';
 import '../screens/splash_screen.dart';
 import '../screens/auth/auth_screen.dart';
+import '../screens/auth/forgot_password_screen.dart';
 import '../screens/user/main_screen.dart';
 import '../screens/user/home_screen.dart';
 import '../screens/user/bookings_screen.dart';
@@ -18,6 +19,7 @@ import '../screens/user/review_screen.dart';
 import '../screens/user/checkout_screen.dart';
 import '../screens/user/reviews_screen.dart';
 import '../screens/user/chats_screen.dart';
+import '../screens/user/favorites_screen.dart';
 import '../screens/owner/owner_main_screen.dart';
 import '../screens/owner/owner_hotels_screen.dart';
 import '../screens/owner/owner_chats_screen.dart';
@@ -55,7 +57,12 @@ class AppRouter {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, size: 64),
+            Image.asset(
+              'assets/images/404.png',
+              width: 120,
+              height: 120,
+              fit: BoxFit.contain,
+            ),
             const SizedBox(height: 16),
             Text('Page not found: ${state.matchedLocation}'),
             const SizedBox(height: 8),
@@ -80,7 +87,7 @@ class AppRouter {
       final isAuthenticated = authState is AuthAuthenticated;
       final isOwner = isAuthenticated && authState.user.role == 'owner';
 
-      final authRoutes = ['/auth', '/login', '/register'];
+      final authRoutes = ['/auth', '/login', '/register', '/forgot-password'];
       final userRoutes = [
         '/home',
         '/bookings',
@@ -101,7 +108,8 @@ class AppRouter {
 
       if (!isAuthenticated &&
           !authRoutes.contains(location) &&
-          !location.startsWith('/auth')) {
+          !location.startsWith('/auth') &&
+          !location.startsWith('/forgot-password')) {
         return '/auth';
       }
 
@@ -131,6 +139,10 @@ class AppRouter {
         builder: (context, state) => const AuthScreen(),
       ),
       GoRoute(
+        path: '/forgot-password',
+        builder: (context, state) => const ForgotPasswordScreen(),
+      ),
+      GoRoute(
         path: '/login',
         builder: (context, state) => const AuthScreen(initiallyShowLogin: true),
       ),
@@ -150,7 +162,7 @@ class AppRouter {
           GoRoute(
             path: '/hotel/:id',
             builder: (context, state) => HotelDetailScreen(
-              hotelId: int.parse(state.pathParameters['id']!),
+              hotelId: state.pathParameters['id']!,
             ),
           ),
           GoRoute(
@@ -160,7 +172,7 @@ class AppRouter {
               GoRoute(
                 path: ':id',
                 builder: (context, state) => BookingDetailScreen(
-                  bookingId: int.parse(state.pathParameters['id']!),
+                  bookingId: state.pathParameters['id']!,
                 ),
               ),
             ],
@@ -176,7 +188,7 @@ class AppRouter {
           GoRoute(
             path: '/chat/:hotelId',
             builder: (context, state) => ChatScreen(
-              hotelId: int.parse(state.pathParameters['hotelId']!),
+              hotelId: state.pathParameters['hotelId']!,
               bookingStatus: state.uri.queryParameters['bookingStatus'],
             ),
           ),
@@ -184,6 +196,10 @@ class AppRouter {
             path: '/profile',
             builder: (context, state) => const ProfileScreen(),
             routes: [
+              GoRoute(
+                path: 'favorites',
+                builder: (context, state) => const FavoritesScreen(),
+              ),
               GoRoute(
                 path: 'language',
                 builder: (context, state) => const LanguageSettingsScreen(),
@@ -213,13 +229,13 @@ class AppRouter {
           GoRoute(
             path: '/review/:bookingId',
             builder: (context, state) => ReviewScreen(
-              bookingId: int.parse(state.pathParameters['bookingId']!),
+              bookingId: state.pathParameters['bookingId']!,
             ),
           ),
           GoRoute(
             path: '/checkout/:bookingId',
             builder: (context, state) => CheckoutScreen(
-              bookingId: int.parse(state.pathParameters['bookingId']!),
+              bookingId: state.pathParameters['bookingId']!,
             ),
           ),
         ],
@@ -242,13 +258,13 @@ class AppRouter {
               GoRoute(
                 path: 'edit/:id',
                 builder: (context, state) => EditHotelScreen(
-                  hotelId: int.parse(state.pathParameters['id']!),
+                  hotelId: state.pathParameters['id']!,
                 ),
               ),
               GoRoute(
                 path: ':id/reviews',
                 builder: (context, state) => HotelReviewsScreen(
-                  hotelId: int.parse(state.pathParameters['id']!),
+                  hotelId: state.pathParameters['id']!,
                 ),
               ),
             ],
@@ -264,8 +280,8 @@ class AppRouter {
           GoRoute(
             path: '/owner/chats/:hotelId/:userId',
             builder: (context, state) => OwnerChatScreen(
-              hotelId: int.parse(state.pathParameters['hotelId']!),
-              userId: int.parse(state.pathParameters['userId']!),
+              hotelId: state.pathParameters['hotelId']!,
+              userId: state.pathParameters['userId']!,
             ),
           ),
           GoRoute(
@@ -308,6 +324,7 @@ class AppRouter {
           ),
         ],
       ),
+      // AI Chat route - now handled as modal in ChatsScreen
     ],
   );
 }

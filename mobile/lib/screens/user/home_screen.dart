@@ -9,6 +9,7 @@ import '../../blocs/theme/theme_bloc.dart';
 import '../../widgets/hotel_card.dart';
 import '../../widgets/filter_bottom_sheet.dart';
 import '../../widgets/custom_text_field.dart';
+import '../../services/location_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -23,6 +24,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String? _activeQuickFilter;
   bool _hasActiveFilters = false;
+  
+  // Pagination state
+  int _currentPage = 0;
+  final int _itemsPerPage = 8;
+  List<dynamic> _allHotels = [];
+  List<dynamic> _currentPageHotels = [];
 
   @override
   void initState() {
@@ -34,6 +41,189 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _updatePagination(List<dynamic> hotels) {
+    _allHotels = hotels;
+    _currentPage = 0; // Reset to first page
+    _updateCurrentPageHotels();
+  }
+
+  void _updateCurrentPageHotels() {
+    final startIndex = _currentPage * _itemsPerPage;
+    final endIndex = (startIndex + _itemsPerPage).clamp(0, _allHotels.length);
+    _currentPageHotels = _allHotels.sublist(startIndex, endIndex);
+  }
+
+  int get _totalPages => (_allHotels.length / _itemsPerPage).ceil().clamp(1, double.infinity).toInt();
+
+  Widget _buildModernPagination() {
+    if (_totalPages <= 1) return const SizedBox.shrink();
+    
+    return Container(
+      margin: const EdgeInsets.only(top: 16, bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outline.withOpacity(0.08),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Previous Button
+          _buildPaginationButton(
+            icon: Icons.chevron_left,
+            onTap: _currentPage > 0 
+                ? () => setState(() {
+                    _currentPage--;
+                    _updateCurrentPageHotels();
+                  }) 
+                : null,
+            isEnabled: _currentPage > 0,
+          ),
+          
+          // Page Indicators
+          Expanded(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (_totalPages <= 5) ...[
+                  // Show all pages if 5 or fewer
+                  for (int i = 0; i < _totalPages; i++)
+                    _buildPageDot(i),
+                ] else ...[
+                  // Show condensed version for many pages
+                  _buildPageDot(0),
+                  if (_currentPage > 2) ...[
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      child: Text(
+                        '...',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                        ),
+                      ),
+                    ),
+                  ],
+                  for (int i = (_currentPage - 1).clamp(1, _totalPages - 2); 
+                      i <= (_currentPage + 1).clamp(1, _totalPages - 2); i++)
+                    _buildPageDot(i),
+                  if (_currentPage < _totalPages - 3) ...[
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      child: Text(
+                        '...',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                        ),
+                      ),
+                    ),
+                  ],
+                  if (_totalPages > 1) _buildPageDot(_totalPages - 1),
+                ],
+              ],
+            ),
+          ),
+          
+          // Next Button  
+          _buildPaginationButton(
+            icon: Icons.chevron_right,
+            onTap: _currentPage < _totalPages - 1 
+                ? () => setState(() {
+                    _currentPage++;
+                    _updateCurrentPageHotels();
+                  }) 
+                : null,
+            isEnabled: _currentPage < _totalPages - 1,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPaginationButton({
+    required IconData icon,
+    required VoidCallback? onTap,
+    required bool isEnabled,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        splashColor: isEnabled 
+            ? Theme.of(context).colorScheme.primary.withOpacity(0.2)
+            : Colors.transparent,
+        highlightColor: isEnabled 
+            ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
+            : Colors.transparent,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: isEnabled 
+                ? Theme.of(context).colorScheme.primary
+                : Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
+            borderRadius: BorderRadius.circular(10),
+            boxShadow: isEnabled ? [
+              BoxShadow(
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.25),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ] : [],
+          ),
+          child: Icon(
+            icon,
+            size: 18,
+            color: isEnabled 
+                ? Theme.of(context).colorScheme.onPrimary
+                : Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPageDot(int pageIndex) {
+    final isActive = pageIndex == _currentPage;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => setState(() {
+          _currentPage = pageIndex;
+          _updateCurrentPageHotels();
+        }),
+        borderRadius: BorderRadius.circular(16),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          margin: const EdgeInsets.symmetric(horizontal: 3),
+          width: isActive ? 24 : 8,
+          height: 8,
+          decoration: BoxDecoration(
+            color: isActive 
+                ? Theme.of(context).colorScheme.primary
+                : Theme.of(context).colorScheme.primary.withOpacity(0.3),
+            borderRadius: BorderRadius.circular(4),
+          ),
+        ),
+      ),
+    );
   }
 
   void _showFilterBottomSheet() {
@@ -84,7 +274,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void _onQuickFilterTap(String filterType) {
+  void _onQuickFilterTap(String filterType) async {
     setState(() {
       if (_activeQuickFilter == filterType) {
         _activeQuickFilter = null;
@@ -93,27 +283,165 @@ class _HomeScreenState extends State<HomeScreen> {
       } else {
         _activeQuickFilter = filterType;
         _hasActiveFilters = true;
-
-        switch (filterType) {
-          case 'nearme':
-            context.read<HotelsBloc>().add(const HotelsLoadEvent());
-            break;
-          case 'deals':
-            context.read<HotelsBloc>().add(const HotelsLoadEvent());
-            break;
-          case 'luxury':
-            context.read<HotelsBloc>().add(const HotelsFilterEvent(
-                  amenities: ['Spa', 'Pool', 'Restaurant'],
-                ));
-            break;
-          case 'business':
-            context.read<HotelsBloc>().add(const HotelsFilterEvent(
-                  amenities: ['WiFi', 'Business Center'],
-                ));
-            break;
-        }
       }
     });
+
+    if (_activeQuickFilter == filterType) {
+      switch (filterType) {
+        case 'nearme':
+          await _handleNearMeFilter();
+          break;
+        case 'deals':
+          _handleDealsFilter();
+          break;
+        case 'luxury':
+          context.read<HotelsBloc>().add(const HotelsFilterEvent(
+                amenities: ['Spa', 'Pool', 'Restaurant'],
+              ));
+          break;
+        case 'business':
+          context.read<HotelsBloc>().add(const HotelsFilterEvent(
+                amenities: ['WiFi', 'Business Center'],
+              ));
+          break;
+      }
+    }
+  }
+
+  Future<void> _handleNearMeFilter() async {
+    try {
+      // Show loading indicator
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+              ),
+              const SizedBox(width: 12),
+              Text('Getting your location...', style: GoogleFonts.poppins(fontSize: 14)),
+            ],
+          ),
+          backgroundColor: Theme.of(context).colorScheme.primary,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+
+      // Get user's current location
+      final locationService = LocationService();
+      final locationData = await locationService.getCurrentLocation();
+
+      if (locationData != null) {
+        // Use the location to fetch nearby hotels
+        context.read<HotelsBloc>().add(HotelsNearbyEvent(
+          latitude: locationData.latitude!,
+          longitude: locationData.longitude!,
+          radiusKm: 15.0, // 15km radius
+        ));
+
+        // Show success message with location info
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Showing hotels near ${locationData.latitude!.toStringAsFixed(4)}, ${locationData.longitude!.toStringAsFixed(4)} (15km radius)',
+              style: GoogleFonts.poppins(fontSize: 14),
+            ),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      // Handle location error
+      setState(() {
+        _activeQuickFilter = null;
+        _hasActiveFilters = false;
+      });
+
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Location access required. Please enable GPS and location permissions.',
+            style: GoogleFonts.poppins(fontSize: 14),
+          ),
+          backgroundColor: Theme.of(context).colorScheme.error,
+          duration: const Duration(seconds: 3),
+          action: SnackBarAction(
+            label: 'Retry',
+            textColor: Colors.white,
+            onPressed: () => _onQuickFilterTap('nearme'),
+          ),
+        ),
+      );
+    }
+  }
+
+  void _handleDealsFilter() {
+    // Show hotels with good prices (under $150 per night)
+    context.read<HotelsBloc>().add(const HotelsDealsEvent(
+      maxPriceFilter: 150.0,
+    ));
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Showing best deals under \$150/night',
+          style: GoogleFonts.poppins(fontSize: 14),
+        ),
+        backgroundColor: Colors.orange,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _showSortOptions() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Sort Hotels',
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 20),
+            ListTile(
+              leading: const Icon(Icons.star),
+              title: const Text('Highest Rated'),
+              onTap: () {
+                context.read<HotelsBloc>().add(const HotelsLoadEvent());
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.attach_money),
+              title: const Text('Price: Low to High'),
+              onTap: () {
+                context.read<HotelsBloc>().add(const HotelsLoadEvent());
+                Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.money_off),
+              title: const Text('Price: High to Low'),
+              onTap: () {
+                context.read<HotelsBloc>().add(const HotelsLoadEvent());
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -248,69 +576,82 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ],
                   ),
-                  SizedBox(height: isTablet ? 32 : 24),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: SizedBox(
-                          height: 40,
-                          child: ListView(
-                            scrollDirection: Axis.horizontal,
+                  // Only show filter buttons if hotels are loaded and not empty
+                  BlocBuilder<HotelsBloc, HotelsState>(
+                    builder: (context, state) {
+                      final showFilters = state is HotelsLoaded && state.hotels.isNotEmpty;
+                      if (!showFilters) {
+                        return const SizedBox.shrink();
+                      }
+                      return Column(
+                        children: [
+                          SizedBox(height: isTablet ? 32 : 24),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                             children: [
-                              _QuickFilterChip(
-                                label: 'Near me',
+                              _ModernFilterIcon(
+                                icon: Icons.location_on,
+                                label: 'Near',
                                 isSelected: _activeQuickFilter == 'nearme',
                                 onTap: () => _onQuickFilterTap('nearme'),
                               ),
-                              const SizedBox(width: 12),
-                              _QuickFilterChip(
-                                label: 'Best deals',
+                              _ModernFilterIcon(
+                                icon: Icons.local_offer,
+                                label: 'Deals',
                                 isSelected: _activeQuickFilter == 'deals',
                                 onTap: () => _onQuickFilterTap('deals'),
                               ),
-                              const SizedBox(width: 12),
-                              _QuickFilterChip(
+                              _ModernFilterIcon(
+                                icon: Icons.diamond,
                                 label: 'Luxury',
                                 isSelected: _activeQuickFilter == 'luxury',
                                 onTap: () => _onQuickFilterTap('luxury'),
                               ),
-                              const SizedBox(width: 12),
-                              _QuickFilterChip(
+                              _ModernFilterIcon(
+                                icon: Icons.business,
                                 label: 'Business',
                                 isSelected: _activeQuickFilter == 'business',
                                 onTap: () => _onQuickFilterTap('business'),
                               ),
+                              _ModernFilterIcon(
+                                icon: Icons.sort,
+                                label: 'Sort',
+                                isSelected: false,
+                                onTap: _showSortOptions,
+                              ),
                             ],
                           ),
-                        ),
-                      ),
-                      if (_hasActiveFilters) ...[
-                        const SizedBox(width: 12),
-                        TextButton.icon(
-                          onPressed: _clearAllFilters,
-                          icon: Icon(
-                            Icons.clear,
-                            size: 16,
-                            color: Theme.of(context).colorScheme.error,
-                          ),
-                          label: Text(
-                            'Clear',
-                            style: GoogleFonts.poppins(
-                              fontSize: 14,
-                              color: Theme.of(context).colorScheme.error,
+                          if (_hasActiveFilters) ...[
+                            const SizedBox(height: 12),
+                            Center(
+                              child: TextButton.icon(
+                                onPressed: _clearAllFilters,
+                                icon: Icon(
+                                  Icons.clear,
+                                  size: 16,
+                                  color: Theme.of(context).colorScheme.error,
+                                ),
+                                label: Text(
+                                  'Clear Filters',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 14,
+                                    color: Theme.of(context).colorScheme.error,
+                                  ),
+                                ),
+                                style: TextButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
+                                    minimumSize: Size.zero,
+                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  ),
+                                ),
                             ),
-                          ),
-                          style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            minimumSize: Size.zero,
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          ),
-                        ),
-                      ],
-                    ],
+                          ],
+                        ],
+                      );
+                    },
                   ),
                 ],
               ),
@@ -367,11 +708,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Icon(
-                                      Icons.error_outline,
-                                      size: isTablet ? 80 : 64,
-                                      color:
-                                          Theme.of(context).colorScheme.error,
+                                    Image.asset(
+                                      'assets/images/500.png',
+                                      width: isTablet ? 160 : 120,
+                                      height: isTablet ? 160 : 120,
+                                      fit: BoxFit.contain,
                                     ),
                                     const SizedBox(height: 16),
                                     Text(
@@ -421,35 +762,21 @@ class _HomeScreenState extends State<HomeScreen> {
                                   child: Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      Icon(
-                                        Icons.search_off,
-                                        size: isTablet ? 80 : 64,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onBackground
-                                            .withOpacity(0.3),
+                                      Image.asset(
+                                        'assets/images/No Hotels Found.png',
+                                        width: isTablet ? 160 : 120,
+                                        height: isTablet ? 160 : 120,
+                                        fit: BoxFit.contain,
                                       ),
                                       const SizedBox(height: 16),
                                       Text(
-                                        'No hotels found',
-                                        style: GoogleFonts.poppins(
-                                          fontSize: isTablet ? 20 : 18,
-                                          fontWeight: FontWeight.w600,
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .onBackground,
-                                        ),
-                                        textAlign: TextAlign.center,
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Text(
                                         'Try adjusting your search or filters',
                                         style: GoogleFonts.poppins(
-                                          fontSize: isTablet ? 16 : 14,
+                                          fontSize: isTablet ? 18 : 16,
                                           color: Theme.of(context)
                                               .colorScheme
                                               .onBackground
-                                              .withOpacity(0.6),
+                                              .withOpacity(0.7),
                                         ),
                                         textAlign: TextAlign.center,
                                       ),
@@ -459,47 +786,72 @@ class _HomeScreenState extends State<HomeScreen> {
                               );
                             }
 
+                            // Update pagination when hotels change
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (_allHotels.length != state.hotels.length) {
+                                setState(() {
+                                  _updatePagination(state.hotels);
+                                });
+                              }
+                            });
+
                             if (_isGridView) {
-                              return GridView.builder(
-                                padding: const EdgeInsets.only(bottom: 20),
-                                gridDelegate:
-                                    SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: gridColumns,
-                                  childAspectRatio: isTablet ? 0.8 : 0.75,
-                                  crossAxisSpacing: isTablet ? 20 : 16,
-                                  mainAxisSpacing: isTablet ? 20 : 16,
-                                ),
-                                itemCount: state.hotels.length,
-                                itemBuilder: (context, index) {
-                                  final hotel = state.hotels[index];
-                                  return LayoutBuilder(
-                                    builder: (context, constraints) {
-                                      return HotelCard(
-                                        hotel: hotel,
-                                        isGridView: true,
-                                        onTap: () => context
-                                            .go('/hotel/${hotel.id}'),
-                                      );
-                                    },
-                                  );
-                                },
+                              return Column(
+                                children: [
+                                  Expanded(
+                                    child: GridView.builder(
+                                      padding: const EdgeInsets.only(bottom: 0),
+                                      gridDelegate:
+                                          SliverGridDelegateWithFixedCrossAxisCount(
+                                        crossAxisCount: gridColumns,
+                                        childAspectRatio: isTablet ? 0.8 : 0.75,
+                                        crossAxisSpacing: isTablet ? 20 : 16,
+                                        mainAxisSpacing: isTablet ? 20 : 16,
+                                      ),
+                                      itemCount: _currentPageHotels.length,
+                                      itemBuilder: (context, index) {
+                                        final hotel = _currentPageHotels[index];
+                                        return LayoutBuilder(
+                                          builder: (context, constraints) {
+                                            return HotelCard(
+                                              hotel: hotel,
+                                              isGridView: true,
+                                              onTap: () => context
+                                                  .go('/hotel/${hotel.id}'),
+                                            );
+                                          },
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                  if (_allHotels.length > _itemsPerPage)
+                                    _buildModernPagination(),
+                                ],
                               );
                             } else {
-                              return ListView.separated(
-                                padding: const EdgeInsets.only(bottom: 20),
-                                itemCount: state.hotels.length,
-                                separatorBuilder: (context, index) => SizedBox(
-                                  height: isTablet ? 20 : 16,
-                                ),
-                                itemBuilder: (context, index) {
-                                  final hotel = state.hotels[index];
-                                  return HotelCard(
-                                    hotel: hotel,
-                                    isGridView: false,
-                                    onTap: () =>
-                                        context.go('/hotel/${hotel.id}'),
-                                  );
-                                },
+                              return Column(
+                                children: [
+                                  Expanded(
+                                    child: ListView.separated(
+                                      padding: const EdgeInsets.only(bottom: 0),
+                                      itemCount: _currentPageHotels.length,
+                                      separatorBuilder: (context, index) => SizedBox(
+                                        height: isTablet ? 20 : 16,
+                                      ),
+                                      itemBuilder: (context, index) {
+                                        final hotel = _currentPageHotels[index];
+                                        return HotelCard(
+                                          hotel: hotel,
+                                          isGridView: false,
+                                          onTap: () =>
+                                              context.go('/hotel/${hotel.id}'),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                  if (_allHotels.length > _itemsPerPage)
+                                    _buildModernPagination(),
+                                ],
                               );
                             }
                           }
@@ -519,12 +871,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class _QuickFilterChip extends StatelessWidget {
+class _ModernFilterIcon extends StatelessWidget {
+  final IconData icon;
   final String label;
   final bool isSelected;
   final VoidCallback onTap;
 
-  const _QuickFilterChip({
+  const _ModernFilterIcon({
+    required this.icon,
     required this.label,
     required this.isSelected,
     required this.onTap,
@@ -534,43 +888,57 @@ class _QuickFilterChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? Theme.of(context).colorScheme.primary
-              : Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected
-                ? Theme.of(context).colorScheme.primary
-                : Theme.of(context).colorScheme.outline.withOpacity(0.3),
-            width: isSelected ? 2 : 1,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? Theme.of(context).colorScheme.primary
+                  : Theme.of(context).colorScheme.surfaceVariant,
+              borderRadius: BorderRadius.circular(12),
+              border: isSelected
+                  ? Border.all(
+                      color: Theme.of(context).colorScheme.primary,
+                      width: 2,
+                    )
+                  : null,
+              boxShadow: isSelected
+                  ? [
+                      BoxShadow(
+                        color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ]
+                  : null,
+            ),
+            child: Icon(
+              icon,
+              size: 20,
+              color: isSelected
+                  ? Theme.of(context).colorScheme.onPrimary
+                  : Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color:
-                        Theme.of(context).colorScheme.primary.withOpacity(0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
-        ),
-        child: Text(
-          label,
-          style: GoogleFonts.poppins(
-            fontSize: 14,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-            color: isSelected
-                ? Theme.of(context).colorScheme.onPrimary
-                : Theme.of(context).colorScheme.onSurface,
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+              color: isSelected
+                  ? Theme.of(context).colorScheme.primary
+                  : Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-          overflow: TextOverflow.ellipsis,
-          maxLines: 1,
-        ),
+        ],
       ),
     );
   }

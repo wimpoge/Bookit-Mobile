@@ -7,7 +7,7 @@ import '../../blocs/reviews/reviews_bloc.dart';
 import '../../models/review.dart';
 
 class HotelReviewsScreen extends StatefulWidget {
-  final int hotelId;
+  final String hotelId;
 
   const HotelReviewsScreen({
     Key? key,

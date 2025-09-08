@@ -15,17 +15,17 @@ class ConnectionManager:
     def __init__(self):
         self.active_connections: Dict[str, WebSocket] = {}
         
-    async def connect(self, websocket: WebSocket, user_id: int, hotel_id: int, is_owner: bool = False):
+    async def connect(self, websocket: WebSocket, user_id: str, hotel_id: str, is_owner: bool = False):
         await websocket.accept()
         connection_key = f"{user_id}_{hotel_id}_{'owner' if is_owner else 'user'}"
         self.active_connections[connection_key] = websocket
         
-    def disconnect(self, user_id: int, hotel_id: int, is_owner: bool = False):
+    def disconnect(self, user_id: str, hotel_id: str, is_owner: bool = False):
         connection_key = f"{user_id}_{hotel_id}_{'owner' if is_owner else 'user'}"
         if connection_key in self.active_connections:
             del self.active_connections[connection_key]
     
-    async def send_personal_message(self, message: dict, user_id: int, hotel_id: int, is_owner: bool = False):
+    async def send_personal_message(self, message: dict, user_id: str, hotel_id: str, is_owner: bool = False):
         connection_key = f"{user_id}_{hotel_id}_{'owner' if is_owner else 'user'}"
         if connection_key in self.active_connections:
             try:
@@ -33,7 +33,7 @@ class ConnectionManager:
             except:
                 self.disconnect(user_id, hotel_id, is_owner)
     
-    async def broadcast_to_chat(self, message: dict, hotel_id: int, sender_user_id: int, sender_is_owner: bool):
+    async def broadcast_to_chat(self, message: dict, hotel_id: str, sender_user_id: str, sender_is_owner: bool):
         if sender_is_owner:
             await self.send_personal_message(message, sender_user_id, hotel_id, False)
         else:
@@ -43,7 +43,7 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 @router.websocket("/ws/user/{hotel_id}")
-async def websocket_user_chat(websocket: WebSocket, hotel_id: int, token: str, db: Session = Depends(get_db)):
+async def websocket_user_chat(websocket: WebSocket, hotel_id: str, token: str, db: Session = Depends(get_db)):
     try:
         user = await get_user_from_token(token, db)
         if not user:
@@ -97,7 +97,7 @@ async def websocket_user_chat(websocket: WebSocket, hotel_id: int, token: str, d
         await websocket.close(code=4000)
 
 @router.websocket("/ws/owner/{hotel_id}/{user_id}")
-async def websocket_owner_chat(websocket: WebSocket, hotel_id: int, user_id: int, token: str, db: Session = Depends(get_db)):
+async def websocket_owner_chat(websocket: WebSocket, hotel_id: str, user_id: str, token: str, db: Session = Depends(get_db)):
     try:
         owner = await get_user_from_token(token, db)
         if not owner:
@@ -157,7 +157,7 @@ async def websocket_owner_chat(websocket: WebSocket, hotel_id: int, user_id: int
 
 @router.get("/hotel/{hotel_id}", response_model=List[schemas.ChatMessageResponse])
 def get_chat_messages(
-    hotel_id: int,
+    hotel_id: str,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -179,7 +179,7 @@ def get_chat_messages(
 
 @router.post("/hotel/{hotel_id}", response_model=schemas.ChatMessageResponse)
 def send_message(
-    hotel_id: int,
+    hotel_id: str,
     message: schemas.ChatMessageCreate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -279,8 +279,8 @@ def get_owner_conversations(
 
 @router.get("/owner/chats/{hotel_id}/{user_id}", response_model=List[schemas.ChatMessageResponse])
 def get_owner_chat_messages(
-    hotel_id: int,
-    user_id: int,
+    hotel_id: str,
+    user_id: str,
     current_user: models.User = Depends(get_current_owner),
     db: Session = Depends(get_db)
 ):
@@ -319,8 +319,8 @@ def get_owner_chat_messages(
 
 @router.post("/owner/chats/{hotel_id}/{user_id}", response_model=schemas.ChatMessageResponse)
 def send_owner_message(
-    hotel_id: int,
-    user_id: int,
+    hotel_id: str,
+    user_id: str,
     message: schemas.ChatMessageCreate,
     current_user: models.User = Depends(get_current_owner),
     db: Session = Depends(get_db)

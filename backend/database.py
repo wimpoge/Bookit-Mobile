@@ -30,20 +30,33 @@ def init_database():
             if 'is_from_owner' not in columns:
                 conn.execute(text("ALTER TABLE chat_messages ADD COLUMN is_from_owner BOOLEAN DEFAULT FALSE"))
                 conn.commit()
-                print("Added is_from_owner column to chat_messages")
                 
             if 'is_read' not in columns:
                 conn.execute(text("ALTER TABLE chat_messages ADD COLUMN is_read BOOLEAN DEFAULT FALSE"))
                 conn.commit()
-                print("Added is_read column to chat_messages")
                 
             if 'updated_at' not in columns:
                 conn.execute(text("ALTER TABLE chat_messages ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"))
                 conn.commit()
-                print("Added updated_at column to chat_messages")
                 
         except Exception as e:
-            print(f"Database initialization note: {e}")
+            pass
+            
+        # Add AI chat history table
+        try:
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS ai_chat_history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    message TEXT NOT NULL,
+                    ai_response TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users (id)
+                )
+            """))
+            conn.commit()
+        except Exception as e:
+            pass
             
         try:
             result = conn.execute(text("PRAGMA table_info(payments)"))
@@ -52,10 +65,9 @@ def init_database():
             if 'updated_at' not in columns:
                 conn.execute(text("ALTER TABLE payments ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"))
                 conn.commit()
-                print("Added updated_at column to payments")
                 
         except Exception as e:
-            print(f"Payments table update note: {e}")
+            pass
             
         try:
             result = conn.execute(text("PRAGMA table_info(payment_methods)"))
@@ -64,10 +76,9 @@ def init_database():
             if 'updated_at' not in columns:
                 conn.execute(text("ALTER TABLE payment_methods ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"))
                 conn.commit()
-                print("Added updated_at column to payment_methods")
                 
         except Exception as e:
-            print(f"Payment methods table update note: {e}")
+            pass
             
         try:
             conn.execute(text("""
@@ -79,10 +90,28 @@ def init_database():
                 ON chat_messages(created_at)
             """))
             conn.commit()
-            print("Database indexes created successfully")
         except Exception as e:
-            print(f"Index creation note: {e}")
+            pass
+            
+        # Add discount columns to hotels table
+        try:
+            result = conn.execute(text("PRAGMA table_info(hotels)"))
+            columns = [row[1] for row in result.fetchall()]
+            
+            if 'discount_percentage' not in columns:
+                conn.execute(text("ALTER TABLE hotels ADD COLUMN discount_percentage DECIMAL(5,2) DEFAULT 0.0"))
+                conn.commit()
+                
+            if 'discount_price' not in columns:
+                conn.execute(text("ALTER TABLE hotels ADD COLUMN discount_price DECIMAL(10,2)"))
+                conn.commit()
+                
+            if 'is_deal' not in columns:
+                conn.execute(text("ALTER TABLE hotels ADD COLUMN is_deal BOOLEAN DEFAULT FALSE"))
+                conn.commit()
+                
+        except Exception as e:
+            pass
 
 if __name__ == "__main__":
     init_database()
-    print("Database initialization completed")

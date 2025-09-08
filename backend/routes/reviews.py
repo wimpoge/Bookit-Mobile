@@ -11,7 +11,7 @@ router = APIRouter()
 
 @router.get("/hotel/{hotel_id}")
 def get_hotel_reviews(
-    hotel_id: int,
+    hotel_id: str,
     page: int = Query(1, ge=1, description="Page number"),
     limit: int = Query(5, ge=1, le=50, description="Number of reviews per page"),
     sort_by: str = Query("newest", description="Sort by: newest, oldest, rating_high, rating_low"),
@@ -165,7 +165,7 @@ def create_review(
 
 @router.put("/{review_id}", response_model=schemas.ReviewResponse)
 def update_review(
-    review_id: int,
+    review_id: str,
     review_update: schemas.ReviewBase,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -207,7 +207,7 @@ def update_review(
 
 @router.put("/{review_id}/reply", response_model=schemas.ReviewResponse)
 def reply_to_review(
-    review_id: int,
+    review_id: str,
     reply: schemas.ReviewUpdate,
     current_user: models.User = Depends(get_current_owner),
     db: Session = Depends(get_db)
@@ -232,7 +232,7 @@ def reply_to_review(
 
 @router.delete("/{review_id}")
 def delete_review(
-    review_id: int,
+    review_id: str,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):

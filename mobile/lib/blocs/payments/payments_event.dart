@@ -19,7 +19,7 @@ class PaymentMethodAddEvent extends PaymentsEvent {
 }
 
 class PaymentMethodUpdateEvent extends PaymentsEvent {
-  final int methodId;
+  final String methodId;
   final Map<String, dynamic> paymentMethodData;
 
   const PaymentMethodUpdateEvent({
@@ -32,7 +32,7 @@ class PaymentMethodUpdateEvent extends PaymentsEvent {
 }
 
 class PaymentMethodDeleteEvent extends PaymentsEvent {
-  final int methodId;
+  final String methodId;
 
   const PaymentMethodDeleteEvent({required this.methodId});
 

@@ -7,8 +7,8 @@ import '../../blocs/chat/chat_bloc.dart';
 import '../../models/chat_message.dart';
 
 class OwnerChatScreen extends StatefulWidget {
-  final int hotelId;
-  final int userId;
+  final String hotelId;
+  final String userId;
 
   const OwnerChatScreen({
     Key? key,

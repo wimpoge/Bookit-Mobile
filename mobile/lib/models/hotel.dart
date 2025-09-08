@@ -1,20 +1,25 @@
 import 'dart:convert';
+import 'room_type.dart';
 
 class Hotel {
-  final int id;
+  final String id;
   final String name;
   final String? description;
   final String address;
   final String city;
   final String country;
   final double pricePerNight;
+  final double? discountPercentage;
+  final double? discountPrice;
+  final bool isDeal;
   final double rating;
   final List<String> amenities;
   final List<String> images;
   final int totalRooms;
   final int availableRooms;
-  final int ownerId;
+  final String ownerId;
   final String? ownerName;
+  final List<RoomType> roomTypes;
   final double? latitude;
   final double? longitude;
   final DateTime createdAt;
@@ -27,6 +32,9 @@ class Hotel {
     required this.city,
     required this.country,
     required this.pricePerNight,
+    this.discountPercentage,
+    this.discountPrice,
+    this.isDeal = false,
     required this.rating,
     required this.amenities,
     required this.images,
@@ -34,6 +42,7 @@ class Hotel {
     required this.availableRooms,
     required this.ownerId,
     this.ownerName,
+    this.roomTypes = const [],
     this.latitude,
     this.longitude,
     required this.createdAt,
@@ -41,20 +50,26 @@ class Hotel {
 
   factory Hotel.fromJson(Map<String, dynamic> json) {
     return Hotel(
-      id: json['id'],
+      id: json['id'].toString(),
       name: json['name'],
       description: json['description'],
       address: json['address'],
       city: json['city'],
       country: json['country'],
       pricePerNight: json['price_per_night'].toDouble(),
+      discountPercentage: json['discount_percentage']?.toDouble(),
+      discountPrice: json['discount_price']?.toDouble(),
+      isDeal: json['is_deal'] ?? false,
       rating: json['rating'].toDouble(),
       amenities: List<String>.from(json['amenities'] ?? []),
       images: List<String>.from(json['images'] ?? []),
       totalRooms: json['total_rooms'],
       availableRooms: json['available_rooms'],
-      ownerId: json['owner_id'],
+      ownerId: json['owner_id'].toString(),
       ownerName: json['owner_name'],
+      roomTypes: (json['room_types'] as List<dynamic>?)
+          ?.map((roomType) => RoomType.fromJson(roomType))
+          .toList() ?? [],
       latitude: json['latitude']?.toDouble(),
       longitude: json['longitude']?.toDouble(),
       createdAt: DateTime.parse(json['created_at']),
@@ -70,6 +85,9 @@ class Hotel {
       'city': city,
       'country': country,
       'price_per_night': pricePerNight,
+      'discount_percentage': discountPercentage,
+      'discount_price': discountPrice,
+      'is_deal': isDeal,
       'rating': rating,
       'amenities': amenities,
       'images': images,
@@ -77,6 +95,7 @@ class Hotel {
       'available_rooms': availableRooms,
       'owner_id': ownerId,
       'owner_name': ownerName,
+      'room_types': roomTypes.map((rt) => rt.toJson()).toList(),
       'latitude': latitude,
       'longitude': longitude,
       'created_at': createdAt.toIso8601String(),
@@ -86,19 +105,23 @@ class Hotel {
   String toJson() => jsonEncode(toMap());
 
   Hotel copyWith({
-    int? id,
+    String? id,
     String? name,
     String? description,
     String? address,
     String? city,
     String? country,
     double? pricePerNight,
+    double? discountPercentage,
+    double? discountPrice,
+    bool? isDeal,
     double? rating,
     List<String>? amenities,
     List<String>? images,
     int? totalRooms,
     int? availableRooms,
-    int? ownerId,
+    String? ownerId,
+    List<RoomType>? roomTypes,
     double? latitude,
     double? longitude,
     DateTime? createdAt,
@@ -111,12 +134,16 @@ class Hotel {
       city: city ?? this.city,
       country: country ?? this.country,
       pricePerNight: pricePerNight ?? this.pricePerNight,
+      discountPercentage: discountPercentage ?? this.discountPercentage,
+      discountPrice: discountPrice ?? this.discountPrice,
+      isDeal: isDeal ?? this.isDeal,
       rating: rating ?? this.rating,
       amenities: amenities ?? this.amenities,
       images: images ?? this.images,
       totalRooms: totalRooms ?? this.totalRooms,
       availableRooms: availableRooms ?? this.availableRooms,
       ownerId: ownerId ?? this.ownerId,
+      roomTypes: roomTypes ?? this.roomTypes,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
       createdAt: createdAt ?? this.createdAt,
@@ -127,4 +154,31 @@ class Hotel {
   bool get hasImages => images.isNotEmpty;
   String get mainImage => hasImages ? images.first : '';
   bool get isAvailable => availableRooms > 0;
+  
+  // Get the effective price (discounted price if available, otherwise original price)
+  double get effectivePrice => isDeal && discountPrice != null ? discountPrice! : pricePerNight;
+  
+  // Get formatted price string with discount information
+  String get priceDisplay {
+    if (isDeal && discountPrice != null && discountPercentage != null) {
+      return '\$${discountPrice!.toStringAsFixed(0)}/night';
+    }
+    return '\$${pricePerNight.toStringAsFixed(0)}/night';
+  }
+  
+  // Get original price display (crossed out if there's a discount)
+  String? get originalPriceDisplay {
+    if (isDeal && discountPrice != null && discountPercentage != null) {
+      return '\$${pricePerNight.toStringAsFixed(0)}';
+    }
+    return null;
+  }
+  
+  // Get discount percentage as formatted string
+  String? get discountDisplay {
+    if (isDeal && discountPercentage != null && discountPercentage! > 0) {
+      return '${discountPercentage!.toStringAsFixed(0)}% OFF';
+    }
+    return null;
+  }
 }

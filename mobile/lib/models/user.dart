@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 class User {
-  final int id;
+  final String id;
   final String email;
   final String username;
   final String? fullName;
@@ -33,7 +33,7 @@ class User {
     }
 
     return User(
-      id: json['id'],
+      id: json['id'].toString(),
       email: json['email'],
       username: json['username'],
       fullName: json['full_name'],
@@ -66,7 +66,7 @@ class User {
   String toJson() => jsonEncode(toMap());
 
   User copyWith({
-    int? id,
+    String? id,
     String? email,
     String? username,
     String? fullName,

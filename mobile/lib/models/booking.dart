@@ -21,9 +21,9 @@ enum BookingStatus {
 }
 
 class Booking {
-  final int id;
-  final int userId;
-  final int hotelId;
+  final String id;
+  final String userId;
+  final String hotelId;
   final DateTime checkInDate;
   final DateTime checkOutDate;
   final int guests;
@@ -53,9 +53,9 @@ class Booking {
 
   factory Booking.fromJson(Map<String, dynamic> json) {
     return Booking(
-      id: json['id'],
-      userId: json['user_id'],
-      hotelId: json['hotel_id'],
+      id: json['id'].toString(),
+      userId: json['user_id'].toString(),
+      hotelId: json['hotel_id'].toString(),
       checkInDate: DateTime.parse(json['check_in_date']),
       checkOutDate: DateTime.parse(json['check_out_date']),
       guests: json['guests'],
@@ -90,9 +90,9 @@ class Booking {
   String toJson() => jsonEncode(toMap());
 
   Booking copyWith({
-    int? id,
-    int? userId,
-    int? hotelId,
+    String? id,
+    String? userId,
+    String? hotelId,
     DateTime? checkInDate,
     DateTime? checkOutDate,
     int? guests,

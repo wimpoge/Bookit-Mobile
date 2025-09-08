@@ -111,10 +111,11 @@ class _OwnerBookingsScreenState extends State<OwnerBookingsScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: Theme.of(context).colorScheme.error,
+            Image.asset(
+              'assets/images/500.png',
+              width: 120,
+              height: 120,
+              fit: BoxFit.contain,
             ),
             const SizedBox(height: 16),
             Text(
@@ -356,33 +357,27 @@ class _OwnerBookingsScreenState extends State<OwnerBookingsScreen>
   Widget _buildEmptyState(OwnerBookingType type) {
     String title;
     String subtitle;
-    IconData icon;
 
     switch (type) {
       case OwnerBookingType.pending:
         title = 'No pending bookings';
         subtitle = 'New booking requests will appear here';
-        icon = Icons.pending_actions;
         break;
       case OwnerBookingType.confirmed:
         title = 'No confirmed bookings';
         subtitle = 'Confirmed bookings will appear here';
-        icon = Icons.book_online;
         break;
       case OwnerBookingType.checkIn:
         title = 'No check-ins today';
         subtitle = 'Guests checking in today will appear here';
-        icon = Icons.login;
         break;
       case OwnerBookingType.checkOut:
         title = 'No check-outs';
         subtitle = 'Guests ready to check out will appear here';
-        icon = Icons.logout;
         break;
       case OwnerBookingType.all:
         title = 'No bookings yet';
         subtitle = 'All bookings will appear here';
-        icon = Icons.calendar_month;
         break;
     }
 
@@ -392,28 +387,18 @@ class _OwnerBookingsScreenState extends State<OwnerBookingsScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              icon,
-              size: 64,
-              color:
-                  Theme.of(context).colorScheme.onBackground.withOpacity(0.3),
+            Image.asset(
+              'assets/images/No Bookings Found.png',
+              width: 120,
+              height: 120,
+              fit: BoxFit.contain,
             ),
             const SizedBox(height: 16),
             Text(
-              title,
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.onBackground,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
               subtitle,
               style: GoogleFonts.poppins(
-                fontSize: 14,
-                color:
-                    Theme.of(context).colorScheme.onBackground.withOpacity(0.6),
+                fontSize: 16,
+                color: Theme.of(context).colorScheme.onBackground.withOpacity(0.7),
               ),
               textAlign: TextAlign.center,
             ),

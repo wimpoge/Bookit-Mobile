@@ -1,9 +1,13 @@
 import 'dart:convert';
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/foundation.dart';
+
+// Conditional imports for platform-specific functionality
+import 'dart:io' as io show Platform;
+// For web compatibility, we'll use dynamic typing for file operations
 import '../models/user.dart';
 import '../models/hotel.dart';
 import '../models/booking.dart';
@@ -11,30 +15,62 @@ import '../models/payment.dart';
 import '../models/review.dart';
 import '../models/chat_message.dart';
 import '../models/chat_conversation.dart';
+import '../models/user_statistics.dart';
 
 class ApiService {
+  static ApiService? _instance;
+  
+  // Singleton pattern
+  static ApiService get instance {
+    _instance ??= ApiService._internal();
+    return _instance!;
+  }
+  
+  // Method to set the singleton instance
+  static void setInstance(ApiService apiService) {
+    _instance = apiService;
+  }
+  
+  // Private constructor
+  ApiService._internal();
+  
+  // Public constructor for dependency injection (used in main.dart)
+  ApiService();
+
   // Use different URLs based on platform and debug mode
   static String get baseUrl {
     String url;
+    String platformInfo = 'web';
+    
     if (kDebugMode) {
       // In debug mode, use appropriate URLs for different platforms
-      if (Platform.isAndroid) {
-        // Android emulator uses 10.0.2.2 to access host machine's localhost
-        url = 'http://10.0.2.2:8000/api';
-      } else if (Platform.isIOS) {
-        // iOS simulator can use localhost directly
+      try {
+        if (kIsWeb) {
+          url = 'http://localhost:8000/api';
+          platformInfo = 'web';
+        } else if (io.Platform.isAndroid) {
+          // Use Android emulator special IP to access host machine
+          url = 'http://10.0.2.2:8000/api';
+          platformInfo = 'android';
+        } else if (io.Platform.isIOS) {
+          // iOS simulator can use localhost directly
+          url = 'http://localhost:8000/api';
+          platformInfo = 'ios';
+        } else {
+          // For other platforms (Windows, macOS, Linux)
+          url = 'http://localhost:8000/api';
+          platformInfo = 'desktop';
+        }
+      } catch (e) {
+        // Fallback for web or unsupported platforms
         url = 'http://localhost:8000/api';
-      } else {
-        // For other platforms (Windows, macOS, Linux)
-        url = 'http://localhost:8000/api';
+        platformInfo = 'unknown';
       }
     } else {
       // In release mode, use your production API URL
       url = 'https://your-production-api.com/api';
     }
     
-    print('ApiService: Using base URL: $url');
-    print('ApiService: Platform: ${Platform.operatingSystem}, Debug: $kDebugMode');
     return url;
   }
   String? _token;
@@ -56,7 +92,6 @@ class ApiService {
     
     // Reduced logging for performance
     if (_token == null && kDebugMode) {
-      print('No token available');
     }
     
     return headers;
@@ -72,9 +107,9 @@ class ApiService {
       queryParameters: queryParams,
     );
 
-    print('API Request: $method $uri');
+    print('🌐 Making $method request to: $uri');
     if (body != null) {
-      print('Request body: ${jsonEncode(body)}');
+      print('📤 Request body: ${jsonEncode(body)}');
     }
 
     http.Response response;
@@ -103,24 +138,22 @@ class ApiService {
       default:
         throw Exception('Unsupported HTTP method: $method');
       }
+      
+      print('📥 Response status: ${response.statusCode}');
+      print('📥 Response body: ${response.body}');
     } catch (e) {
-      print('Network error: $e');
+      print('❌ Request failed: $e');
       if (e.toString().contains('SocketException')) {
         throw Exception('Cannot connect to server. Please check if the backend is running on the correct address.');
       }
       rethrow;
     }
 
-    print('API Response: ${response.statusCode}');
-    print('Response body: ${response.body}');
 
     if (response.statusCode >= 400) {
-      print('API Error: Status ${response.statusCode}');
-      print('API Error: Body ${response.body}');
       
       // Handle token expiration (401 Unauthorized)
       if (response.statusCode == 401) {
-        print('Token expired, triggering logout');
         _onTokenExpired?.call();
       }
       
@@ -166,6 +199,17 @@ class ApiService {
     return User.fromJson(jsonDecode(response.body));
   }
 
+  Future<UserStatistics> getUserStatistics() async {
+    final response = await _makeRequest('GET', '/users/me/statistics');
+    return UserStatistics.fromJson(jsonDecode(response.body));
+  }
+
+  Future<void> forgotPassword(String email) async {
+    await _makeRequest('POST', '/auth/forgot-password', body: {
+      'email': email,
+    });
+  }
+
   Future<List<Hotel>> getHotels({
     int skip = 0,
     int limit = 100,
@@ -178,15 +222,49 @@ class ApiService {
     final queryParams = <String, String>{
       'skip': skip.toString(),
       'limit': limit.toString(),
-      if (city != null) 'city': city,
+      if (city != null && city.isNotEmpty) 'city': city,
       if (minPrice != null) 'min_price': minPrice.toString(),
       if (maxPrice != null) 'max_price': maxPrice.toString(),
-      if (amenities != null) 'amenities': amenities,
-      'amenities_match_all': amenitiesMatchAll.toString(),
+      if (amenities != null && amenities.isNotEmpty) 'amenities': amenities,
     };
 
-    final response =
-        await _makeRequest('GET', '/hotels', queryParams: queryParams);
+    final response = await _makeRequest('GET', '/hotels/', queryParams: queryParams);
+    final List<dynamic> data = jsonDecode(response.body);
+    return data.map((json) => Hotel.fromJson(json)).toList();
+  }
+
+  Future<List<Hotel>> getNearbyHotels({
+    required double latitude,
+    required double longitude,
+    double radiusKm = 10.0,
+    int skip = 0,
+    int limit = 100,
+  }) async {
+    final queryParams = <String, String>{
+      'lat': latitude.toString(),
+      'lon': longitude.toString(),
+      'radius_km': radiusKm.toString(),
+      'skip': skip.toString(),
+      'limit': limit.toString(),
+    };
+
+    final response = await _makeRequest('GET', '/hotels/nearby', queryParams: queryParams);
+    final List<dynamic> data = jsonDecode(response.body);
+    return data.map((json) => Hotel.fromJson(json)).toList();
+  }
+
+  Future<List<Hotel>> getHotelDeals({
+    double? maxPrice,
+    int skip = 0,
+    int limit = 100,
+  }) async {
+    final queryParams = <String, String>{
+      'skip': skip.toString(),
+      'limit': limit.toString(),
+      if (maxPrice != null) 'max_price': maxPrice.toString(),
+    };
+
+    final response = await _makeRequest('GET', '/hotels/deals', queryParams: queryParams);
     final List<dynamic> data = jsonDecode(response.body);
     return data.map((json) => Hotel.fromJson(json)).toList();
   }
@@ -199,7 +277,7 @@ class ApiService {
     return data.map((json) => Hotel.fromJson(json)).toList();
   }
 
-  Future<Hotel> getHotel(int id) async {
+  Future<Hotel> getHotel(String id) async {
     final response = await _makeRequest('GET', '/hotels/$id');
     return Hotel.fromJson(jsonDecode(response.body));
   }
@@ -209,17 +287,50 @@ class ApiService {
     return Hotel.fromJson(jsonDecode(response.body));
   }
 
-  Future<Hotel> updateHotel(int id, Map<String, dynamic> hotelData) async {
+  Future<Hotel> updateHotel(String id, Map<String, dynamic> hotelData) async {
     final response = await _makeRequest('PUT', '/hotels/$id', body: hotelData);
     return Hotel.fromJson(jsonDecode(response.body));
   }
 
-  Future<void> deleteHotel(int id) async {
+  Future<void> deleteHotel(String id) async {
     await _makeRequest('DELETE', '/hotels/$id');
   }
 
-  Future<List<Hotel>> getOwnerHotels() async {
-    final response = await _makeRequest('GET', '/hotels/owner/my-hotels');
+  Future<Map<String, dynamic>> updateHotelDiscount(String hotelId, double discountPercentage) async {
+    final response = await _makeRequest(
+      'PATCH', 
+      '/hotels/owner/$hotelId/discount',
+      queryParams: {'discount_percentage': discountPercentage.toString()},
+    );
+    return jsonDecode(response.body);
+  }
+
+  Future<List<Hotel>> getOwnerHotels({
+    int skip = 0,
+    int limit = 100,
+    String? city,
+    String? status,
+    String? sortBy,
+    bool sortDesc = false,
+    String? search,
+    double? minPrice,
+    double? maxPrice,
+    double? minRating,
+  }) async {
+    final queryParams = <String, String>{
+      'skip': skip.toString(),
+      'limit': limit.toString(),
+      if (city != null && city.isNotEmpty) 'city': city,
+      if (status != null && status.isNotEmpty) 'status': status,
+      if (sortBy != null && sortBy.isNotEmpty) 'sort_by': sortBy,
+      'sort_desc': sortDesc.toString(),
+      if (search != null && search.isNotEmpty) 'search': search,
+      if (minPrice != null) 'min_price': minPrice.toString(),
+      if (maxPrice != null) 'max_price': maxPrice.toString(),
+      if (minRating != null) 'min_rating': minRating.toString(),
+    };
+
+    final response = await _makeRequest('GET', '/hotels/owner/my-hotels', queryParams: queryParams);
     final List<dynamic> data = jsonDecode(response.body);
     return data.map((json) => Hotel.fromJson(json)).toList();
   }
@@ -230,7 +341,7 @@ class ApiService {
     return data.map((json) => Booking.fromJson(json)).toList();
   }
 
-  Future<Booking> getBooking(int id) async {
+  Future<Booking> getBooking(String id) async {
     final response = await _makeRequest('GET', '/bookings/$id');
     return Booking.fromJson(jsonDecode(response.body));
   }
@@ -241,13 +352,13 @@ class ApiService {
   }
 
   Future<Booking> updateBooking(
-      int id, Map<String, dynamic> bookingData) async {
+      String id, Map<String, dynamic> bookingData) async {
     final response =
         await _makeRequest('PUT', '/bookings/$id', body: bookingData);
     return Booking.fromJson(jsonDecode(response.body));
   }
 
-  Future<void> cancelBooking(int id) async {
+  Future<void> cancelBooking(String id) async {
     await _makeRequest('DELETE', '/bookings/$id');
   }
 
@@ -258,27 +369,27 @@ class ApiService {
     return data.map((json) => Booking.fromJson(json)).toList();
   }
 
-  Future<void> confirmBooking(int id) async {
+  Future<void> confirmBooking(String id) async {
     await _makeRequest('PUT', '/bookings/$id/confirm');
   }
 
-  Future<void> rejectBooking(int id) async {
+  Future<void> rejectBooking(String id) async {
     await _makeRequest('PUT', '/bookings/$id/reject');
   }
 
-  Future<void> checkInBooking(int id) async {
+  Future<void> checkInBooking(String id) async {
     await _makeRequest('PUT', '/bookings/$id/check-in');
   }
 
-  Future<void> checkOutBooking(int id) async {
+  Future<void> checkOutBooking(String id) async {
     await _makeRequest('PUT', '/bookings/$id/check-out');
   }
 
-  Future<void> selfCheckInBooking(int id) async {
+  Future<void> selfCheckInBooking(String id) async {
     await _makeRequest('PUT', '/bookings/$id/self-checkin');
   }
 
-  Future<void> selfCheckOutBooking(int id) async {
+  Future<void> selfCheckOutBooking(String id) async {
     await _makeRequest('PUT', '/bookings/$id/self-checkout');
   }
 
@@ -301,13 +412,13 @@ class ApiService {
   }
 
   Future<PaymentMethod> updatePaymentMethod(
-      int id, Map<String, dynamic> paymentData) async {
+      String id, Map<String, dynamic> paymentData) async {
     final response =
         await _makeRequest('PUT', '/payments/methods/$id', body: paymentData);
     return PaymentMethod.fromJson(jsonDecode(response.body));
   }
 
-  Future<void> deletePaymentMethod(int id) async {
+  Future<void> deletePaymentMethod(String id) async {
     await _makeRequest('DELETE', '/payments/methods/$id');
   }
 
@@ -323,7 +434,7 @@ class ApiService {
     return data.map((json) => Payment.fromJson(json)).toList();
   }
 
-  Future<List<Review>> getHotelReviews(int hotelId) async {
+  Future<List<Review>> getHotelReviews(String hotelId) async {
     final response = await _makeRequest('GET', '/reviews/hotel/$hotelId');
     final List<dynamic> data = jsonDecode(response.body);
     return data.map((json) => Review.fromJson(json)).toList();
@@ -334,20 +445,20 @@ class ApiService {
     return Review.fromJson(jsonDecode(response.body));
   }
 
-  Future<Review> updateReview(int id, Map<String, dynamic> reviewData) async {
+  Future<Review> updateReview(String id, Map<String, dynamic> reviewData) async {
     final response =
         await _makeRequest('PUT', '/reviews/$id', body: reviewData);
     return Review.fromJson(jsonDecode(response.body));
   }
 
-  Future<Review> replyToReview(int id, String reply) async {
+  Future<Review> replyToReview(String id, String reply) async {
     final response = await _makeRequest('PUT', '/reviews/$id/reply', body: {
       'owner_reply': reply,
     });
     return Review.fromJson(jsonDecode(response.body));
   }
 
-  Future<void> deleteReview(int id) async {
+  Future<void> deleteReview(String id) async {
     await _makeRequest('DELETE', '/reviews/$id');
   }
 
@@ -357,28 +468,23 @@ class ApiService {
     return data.map((json) => Review.fromJson(json)).toList();
   }
 
-  Future<List<ChatMessage>> getChatMessages(int hotelId) async {
+  Future<List<ChatMessage>> getChatMessages(String hotelId) async {
     final response = await _makeRequest('GET', '/chat/hotel/$hotelId');
     final List<dynamic> data = jsonDecode(response.body);
     return data.map((json) => ChatMessage.fromJson(json)).toList();
   }
 
-  Future<ChatMessage> sendMessage(int hotelId, String message) async {
-    print('API Service: Sending message to hotel $hotelId: $message');
-    print('API Service: Token available: ${_token != null}');
-    print('API Service: Base URL: $baseUrl');
+  Future<ChatMessage> sendMessage(String hotelId, String message) async {
     
     final response = await _makeRequest('POST', '/chat/hotel/$hotelId', body: {
       'message': message,
     });
     
-    print('API Service: Response status: ${response.statusCode}');
-    print('API Service: Response body: ${response.body}');
     
     return ChatMessage.fromJson(jsonDecode(response.body));
   }
 
-  Future<ChatMessage> ownerReply(int hotelId, String message) async {
+  Future<ChatMessage> ownerReply(String hotelId, String message) async {
     final response =
         await _makeRequest('POST', '/chat/hotel/$hotelId/owner-reply', body: {
       'message': message,
@@ -386,7 +492,7 @@ class ApiService {
     return ChatMessage.fromJson(jsonDecode(response.body));
   }
 
-  Future<void> deleteMessage(int messageId) async {
+  Future<void> deleteMessage(String messageId) async {
     await _makeRequest('DELETE', '/chat/message/$messageId');
   }
 
@@ -397,8 +503,8 @@ class ApiService {
   }
 
   Future<List<ChatMessage>> getChatMessagesForOwner({
-    required int hotelId,
-    required int userId,
+    required String hotelId,
+    required String userId,
   }) async {
     final response =
         await _makeRequest('GET', '/chat/owner/chats/$hotelId/$userId');
@@ -407,8 +513,8 @@ class ApiService {
   }
 
   Future<ChatMessage> sendOwnerMessage({
-    required int hotelId,
-    required int userId,
+    required String hotelId,
+    required String userId,
     required String message,
     required bool isFromOwner,
   }) async {
@@ -420,8 +526,8 @@ class ApiService {
   }
 
   Future<void> markMessagesAsRead({
-    required int hotelId,
-    int? userId,
+    required String hotelId,
+    String? userId,
   }) async {
     try {
       await _makeRequest('POST', '/chat/mark-read', body: {
@@ -429,11 +535,10 @@ class ApiService {
         if (userId != null) 'user_id': userId,
       });
     } catch (e) {
-      print('Failed to mark messages as read: $e');
     }
   }
 
-  Future<String> uploadHotelImage(File imageFile) async {
+  Future<String> uploadHotelImage(String fileName, Uint8List imageBytes) async {
     var request = http.MultipartRequest(
       'POST', 
       Uri.parse('$baseUrl/hotels/upload-image')
@@ -444,9 +549,13 @@ class ApiService {
       request.headers['Authorization'] = 'Bearer $_token';
     }
     
-    // Add the file
+    // Add the file using bytes (works on both web and mobile)
     request.files.add(
-      await http.MultipartFile.fromPath('file', imageFile.path)
+      http.MultipartFile.fromBytes(
+        'file', 
+        imageBytes,
+        filename: fileName,
+      )
     );
     
     var response = await request.send();
@@ -460,13 +569,15 @@ class ApiService {
     }
   }
 
-  Future<List<String>> uploadHotelImages(List<File> imageFiles) async {
+  Future<List<String>> uploadHotelImages(List<Map<String, dynamic>> imageData, {String? hotelName}) async {
+    // imageData format: [{'name': 'filename.jpg', 'bytes': Uint8List}, ...]
+    
     // Client-side validation
-    if (imageFiles.length > 10) {
+    if (imageData.length > 10) {
       throw Exception('Maximum 10 images allowed. Please select fewer images.');
     }
     
-    if (imageFiles.isEmpty) {
+    if (imageData.isEmpty) {
       throw Exception('At least one image is required');
     }
     
@@ -480,10 +591,19 @@ class ApiService {
       request.headers['Authorization'] = 'Bearer $_token';
     }
     
-    // Add all files
-    for (var file in imageFiles) {
+    // Add hotel name if provided
+    if (hotelName != null && hotelName.isNotEmpty) {
+      request.fields['hotel_name'] = hotelName;
+    }
+    
+    // Add all files using bytes
+    for (var imageFile in imageData) {
       request.files.add(
-        await http.MultipartFile.fromPath('files', file.path)
+        http.MultipartFile.fromBytes(
+          'files',
+          imageFile['bytes'] as Uint8List,
+          filename: imageFile['name'] as String,
+        )
       );
     }
     
@@ -536,5 +656,45 @@ class ApiService {
       return {'success': true};
     }
     return jsonDecode(response.body);
+  }
+
+  // Favorites methods
+  Future<List<Hotel>> getFavoriteHotels({
+    int skip = 0,
+    int limit = 100,
+    String? city,
+    double? minPrice,
+    double? maxPrice,
+    String? amenities,
+    bool amenitiesMatchAll = false,
+  }) async {
+    final queryParams = <String, String>{
+      'skip': skip.toString(),
+      'limit': limit.toString(),
+      if (city != null) 'city': city,
+      if (minPrice != null) 'min_price': minPrice.toString(),
+      if (maxPrice != null) 'max_price': maxPrice.toString(),
+      if (amenities != null) 'amenities': amenities,
+      'amenities_match_all': amenitiesMatchAll.toString(),
+    };
+
+    final response =
+        await _makeRequest('GET', '/favorites/hotels', queryParams: queryParams);
+    final List<dynamic> data = jsonDecode(response.body);
+    return data.map((json) => Hotel.fromJson(json)).toList();
+  }
+
+  Future<void> addHotelToFavorites(String hotelId) async {
+    await _makeRequest('POST', '/favorites/add/$hotelId');
+  }
+
+  Future<void> removeHotelFromFavorites(String hotelId) async {
+    await _makeRequest('DELETE', '/favorites/remove/$hotelId');
+  }
+
+  Future<bool> isHotelFavorite(String hotelId) async {
+    final response = await _makeRequest('GET', '/favorites/check/$hotelId');
+    final data = jsonDecode(response.body);
+    return data['is_favorite'] ?? false;
   }
 }

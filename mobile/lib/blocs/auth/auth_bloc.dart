@@ -16,6 +16,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthLogoutEvent>(_onLogout);
     on<AuthUpdateUserEvent>(_onUpdateUser);
     on<AuthGoogleLoginEvent>(_onGoogleLogin);
+    on<AuthForgotPasswordEvent>(_onForgotPassword);
+    on<AuthTokenExpiredEvent>(_onTokenExpired);
+    
+    _authService.setTokenExpiredCallback(() {
+      add(AuthTokenExpiredEvent());
+    });
   }
 
   Future<void> _onCheckStatus(AuthCheckStatusEvent event, Emitter<AuthState> emit) async {
@@ -23,21 +29,15 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     
     try {
       // Initialize token asynchronously to avoid blocking the UI
-      print('AuthBloc: Initializing token asynchronously...');
       await _authService.initializeToken();
-      
-      print('AuthBloc: Getting current user...');
       final user = await _authService.getCurrentUser();
       
       if (user != null) {
-        print('AuthBloc: User found, emitting AuthAuthenticated');
         emit(AuthAuthenticated(user));
       } else {
-        print('AuthBloc: No user found, emitting AuthUnauthenticated');
         emit(AuthUnauthenticated());
       }
     } catch (e) {
-      print('AuthBloc: Error during auth check: $e');
       emit(AuthUnauthenticated());
     }
   }
@@ -117,5 +117,25 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     } catch (e) {
       emit(AuthError(e.toString()));
     }
+  }
+
+  Future<void> _onForgotPassword(AuthForgotPasswordEvent event, Emitter<AuthState> emit) async {
+    emit(AuthLoading());
+    
+    try {
+      final result = await _authService.forgotPassword(event.email);
+      
+      if (result.isSuccess) {
+        emit(AuthForgotPasswordSuccess());
+      } else {
+        emit(AuthError(result.error ?? 'Failed to send reset email'));
+      }
+    } catch (e) {
+      emit(AuthError(e.toString()));
+    }
+  }
+
+  Future<void> _onTokenExpired(AuthTokenExpiredEvent event, Emitter<AuthState> emit) async {
+    emit(AuthUnauthenticated());
   }
 }

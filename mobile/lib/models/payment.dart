@@ -1,8 +1,8 @@
 import 'dart:convert';
 
 class PaymentMethod {
-  final int id;
-  final int userId;
+  final String id;
+  final String userId;
   final String type;
   final String provider;
   final Map<String, dynamic> accountInfo;
@@ -21,8 +21,8 @@ class PaymentMethod {
 
   factory PaymentMethod.fromJson(Map<String, dynamic> json) {
     return PaymentMethod(
-      id: json['id'],
-      userId: json['user_id'],
+      id: json['id'].toString(),
+      userId: json['user_id'].toString(),
       type: json['type'],
       provider: json['provider'],
       accountInfo: Map<String, dynamic>.from(json['account_info']),
@@ -46,8 +46,8 @@ class PaymentMethod {
   String toJson() => jsonEncode(toMap());
 
   PaymentMethod copyWith({
-    int? id,
-    int? userId,
+    String? id,
+    String? userId,
     String? type,
     String? provider,
     Map<String, dynamic>? accountInfo,
@@ -105,7 +105,7 @@ class PaymentMethod {
 }
 
 class Payment {
-  final int id;
+  final String id;
   final double amount;
   final String currency;
   final String status;
@@ -123,7 +123,7 @@ class Payment {
 
   factory Payment.fromJson(Map<String, dynamic> json) {
     return Payment(
-      id: json['id'],
+      id: json['id'].toString(),
       amount: json['amount'].toDouble(),
       currency: json['currency'],
       status: json['status'],
@@ -146,7 +146,7 @@ class Payment {
   String toJson() => jsonEncode(toMap());
 
   Payment copyWith({
-    int? id,
+    String? id,
     double? amount,
     String? currency,
     String? status,

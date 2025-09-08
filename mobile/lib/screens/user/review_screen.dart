@@ -10,7 +10,7 @@ import '../../widgets/custom_button.dart';
 import '../../widgets/custom_text_field.dart';
 
 class ReviewScreen extends StatefulWidget {
-  final int bookingId;
+  final String bookingId;
 
   const ReviewScreen({
     Key? key,

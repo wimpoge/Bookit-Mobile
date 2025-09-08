@@ -14,7 +14,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   final WebSocketService _webSocketService = WebSocketService();
   StreamSubscription<ChatMessage>? _webSocketSubscription;
   Timer? _messageRefreshTimer;
-  int? _currentHotelId;
+  String? _currentHotelId;
 
   ChatBloc(this._apiService) : super(ChatInitial()) {
     on<ChatLoadEvent>(_onLoadChat);
@@ -79,25 +79,19 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   Future<void> _onConnectWebSocket(
       ChatConnectWebSocketEvent event, Emitter<ChatState> emit) async {
     try {
-      print('Attempting WebSocket connection to hotel ${event.hotelId}...');
       _webSocketService.setToken(event.token);
       await _webSocketService.connectAsUser(event.hotelId);
       
       _webSocketSubscription = _webSocketService.messageStream?.listen(
         (message) {
-          print('Received WebSocket message: ${message.message}');
           add(ChatNewMessageReceived(message: message));
         },
         onError: (error) {
-          print('WebSocket stream error: $error');
+          // WebSocket error handled silently
         },
       );
-      
-      print('WebSocket connected successfully!');
     } catch (e) {
-      // Continue without WebSocket if it fails
-      print('WebSocket connection failed: $e');
-      print('Will rely on periodic refresh for real-time updates');
+      // Continue without WebSocket if it fails - will rely on periodic refresh
     }
   }
 
@@ -183,7 +177,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       if (state is ChatLoaded) {
         final currentMessages = (state as ChatLoaded).messages;
         final hotelId =
-            currentMessages.isNotEmpty ? currentMessages.first.hotelId : 0;
+            currentMessages.isNotEmpty ? currentMessages.first.hotelId : '0';
         final messages = await _apiService.getChatMessages(hotelId);
         emit(ChatLoaded(messages));
       }

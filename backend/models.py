@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Text, ForeignKey, JSON, Enum as SQLEnum, Numeric, Date
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+from sqlalchemy.dialects.postgresql import UUID
 from database import Base
 from enum import Enum
 import uuid
@@ -38,7 +39,7 @@ class RoomTypeEnum(str, Enum):
 class User(Base):
     __tablename__ = "users"
     
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(String, primary_key=True, index=True, default=lambda: str(uuid.uuid4()))
     email = Column(String, unique=True, index=True)
     username = Column(String, unique=True, index=True)
     hashed_password = Column(String)
@@ -78,6 +79,10 @@ class User(Base):
     profile_image = Column(String)
     loyalty_points = Column(Integer, default=0)
     
+    # Password Reset
+    reset_token = Column(String)
+    reset_token_expires = Column(DateTime(timezone=True))
+    
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
@@ -89,11 +94,12 @@ class User(Base):
     payment_methods = relationship("PaymentMethod", back_populates="user")
     hotels = relationship("Hotel", back_populates="owner")
     chat_messages = relationship("ChatMessage", back_populates="user")
+    favorite_hotels = relationship("UserFavoriteHotel", back_populates="user")
 
 class Hotel(Base):
     __tablename__ = "hotels"
     
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(String, primary_key=True, index=True, default=lambda: str(uuid.uuid4()))
     name = Column(String, index=True)
     description = Column(Text)
     short_description = Column(String(500))
@@ -121,6 +127,9 @@ class Hotel(Base):
     # Pricing
     price_per_night = Column(Float)  # Keep for backward compatibility
     base_price_per_night = Column(Numeric(10, 2))
+    discount_percentage = Column(Numeric(5, 2), default=0.0)  # 0-100 (e.g., 25.50 for 25.5%)
+    discount_price = Column(Numeric(10, 2))  # Calculated discounted price
+    is_deal = Column(Boolean, default=False)  # Whether this hotel is currently a deal
     currency = Column(String, default="USD")
     tax_rate = Column(Numeric(5, 4))  # e.g., 0.1250 for 12.5%
     service_fee_rate = Column(Numeric(5, 4))
@@ -140,7 +149,7 @@ class Hotel(Base):
     virtual_tour_url = Column(String)
     
     # Business Information
-    owner_id = Column(Integer, ForeignKey("users.id"))
+    owner_id = Column(String, ForeignKey("users.id"))
     business_registration = Column(String)
     tax_id = Column(String)
     
@@ -167,8 +176,8 @@ class Hotel(Base):
 class RoomType(Base):
     __tablename__ = "room_types"
     
-    id = Column(Integer, primary_key=True, index=True)
-    hotel_id = Column(Integer, ForeignKey("hotels.id"))
+    id = Column(String, primary_key=True, index=True, default=lambda: str(uuid.uuid4()))
+    hotel_id = Column(String, ForeignKey("hotels.id"))
     
     # Room Details
     name = Column(String, nullable=False)  # "Deluxe King Room"
@@ -211,7 +220,7 @@ class RoomType(Base):
 class Booking(Base):
     __tablename__ = "bookings"
     
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(String, primary_key=True, index=True, default=lambda: str(uuid.uuid4()))
     
     # Booking Identification
     booking_reference = Column(String, unique=True, index=True)  # e.g., "BK123456789"
@@ -219,9 +228,9 @@ class Booking(Base):
     qr_code = Column(String, unique=True, index=True)  # QR code data for check-in
     
     # Primary Relations
-    user_id = Column(Integer, ForeignKey("users.id"))
-    hotel_id = Column(Integer, ForeignKey("hotels.id"))
-    room_type_id = Column(Integer, ForeignKey("room_types.id"))
+    user_id = Column(String, ForeignKey("users.id"))
+    hotel_id = Column(String, ForeignKey("hotels.id"))
+    room_type_id = Column(String, ForeignKey("room_types.id"))
     
     # Stay Details
     check_in_date = Column(DateTime)  # Keep as DateTime for compatibility
@@ -273,7 +282,7 @@ class Booking(Base):
     refund_amount = Column(Numeric(10, 2))
     
     # Payment
-    payment_id = Column(Integer, ForeignKey("payments.id"))  # Keep for backward compatibility
+    payment_id = Column(String, ForeignKey("payments.id"))  # Keep for backward compatibility
     payment_status = Column(String, default=PaymentStatus.PENDING)
     paid_amount = Column(Numeric(10, 2), default=0)
     
@@ -293,8 +302,8 @@ class Booking(Base):
 class BookingGuest(Base):
     __tablename__ = "booking_guests"
     
-    id = Column(Integer, primary_key=True, index=True)
-    booking_id = Column(Integer, ForeignKey("bookings.id"))
+    id = Column(String, primary_key=True, index=True, default=lambda: str(uuid.uuid4()))
+    booking_id = Column(String, ForeignKey("bookings.id"))
     
     # Guest Information
     first_name = Column(String, nullable=False)
@@ -322,16 +331,16 @@ class BookingGuest(Base):
 class Payment(Base):
     __tablename__ = "payments"
     
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(String, primary_key=True, index=True, default=lambda: str(uuid.uuid4()))
     
     # Payment Identification
     payment_reference = Column(String, unique=True, index=True)
     transaction_id = Column(String, unique=True)  # External payment provider ID
     
     # Relations
-    user_id = Column(Integer, ForeignKey("users.id"))
-    booking_id = Column(Integer, ForeignKey("bookings.id"))
-    payment_method_id = Column(Integer, ForeignKey("payment_methods.id"))
+    user_id = Column(String, ForeignKey("users.id"))
+    booking_id = Column(String, ForeignKey("bookings.id"))
+    payment_method_id = Column(String, ForeignKey("payment_methods.id"))
     
     # Payment Details
     amount = Column(Float)  # Keep for backward compatibility
@@ -368,8 +377,8 @@ class Payment(Base):
 class PaymentMethod(Base):
     __tablename__ = "payment_methods"
     
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
+    id = Column(String, primary_key=True, index=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String, ForeignKey("users.id"))
     
     # Payment Method Details
     type = Column(String, nullable=False)  # "card", "bank_account", "digital_wallet"
@@ -409,12 +418,12 @@ class PaymentMethod(Base):
 class Review(Base):
     __tablename__ = "reviews"
     
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(String, primary_key=True, index=True, default=lambda: str(uuid.uuid4()))
     
     # Relations
-    user_id = Column(Integer, ForeignKey("users.id"))
-    hotel_id = Column(Integer, ForeignKey("hotels.id"))
-    booking_id = Column(Integer, ForeignKey("bookings.id"))
+    user_id = Column(String, ForeignKey("users.id"))
+    hotel_id = Column(String, ForeignKey("hotels.id"))
+    booking_id = Column(String, ForeignKey("bookings.id"))
     
     # Review Details
     rating = Column(Integer)  # Keep for backward compatibility
@@ -462,12 +471,12 @@ class Review(Base):
 class ChatMessage(Base):
     __tablename__ = "chat_messages"
     
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(String, primary_key=True, index=True, default=lambda: str(uuid.uuid4()))
     
     # Relations
-    user_id = Column(Integer, ForeignKey("users.id"))
-    hotel_id = Column(Integer, ForeignKey("hotels.id"))
-    booking_id = Column(Integer, ForeignKey("bookings.id"))  # Optional: link to specific booking
+    user_id = Column(String, ForeignKey("users.id"))
+    hotel_id = Column(String, ForeignKey("hotels.id"))
+    booking_id = Column(String, ForeignKey("bookings.id"))  # Optional: link to specific booking
     
     # Message Details
     message = Column(Text, nullable=False)
@@ -503,7 +512,7 @@ class ChatMessage(Base):
 class Amenity(Base):
     __tablename__ = "amenities"
     
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(String, primary_key=True, index=True, default=lambda: str(uuid.uuid4()))
     name = Column(String, nullable=False, unique=True)
     category = Column(String, nullable=False)  # "general", "room", "bathroom", "business", etc.
     icon = Column(String)
@@ -516,13 +525,42 @@ class Amenity(Base):
 class BookingStatusHistory(Base):
     __tablename__ = "booking_status_history"
     
-    id = Column(Integer, primary_key=True, index=True)
-    booking_id = Column(Integer, ForeignKey("bookings.id"))
+    id = Column(String, primary_key=True, index=True, default=lambda: str(uuid.uuid4()))
+    booking_id = Column(String, ForeignKey("bookings.id"))
     
     from_status = Column(String)
     to_status = Column(String, nullable=False)
-    changed_by = Column(Integer, ForeignKey("users.id"))
+    changed_by = Column(String, ForeignKey("users.id"))
     reason = Column(String)
     notes = Column(Text)
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+# User Favorites table
+class UserFavoriteHotel(Base):
+    __tablename__ = "user_favorite_hotels"
+    
+    id = Column(String, primary_key=True, index=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    hotel_id = Column(String, ForeignKey("hotels.id"), nullable=False)
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    user = relationship("User")
+    hotel = relationship("Hotel")
+
+class AIChatHistory(Base):
+    __tablename__ = "ai_chat_history"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    message = Column(Text, nullable=False)
+    ai_response = Column(Text, nullable=False)
+    
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    user = relationship("User")

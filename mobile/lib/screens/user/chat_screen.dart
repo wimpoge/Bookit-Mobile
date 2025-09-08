@@ -12,7 +12,7 @@ import '../../models/hotel.dart';
 import '../../utils/navigation_utils.dart';
 
 class ChatScreen extends StatefulWidget {
-  final int hotelId;
+  final String hotelId;
   final String? bookingStatus;
 
   const ChatScreen({

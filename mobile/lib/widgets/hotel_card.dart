@@ -87,7 +87,6 @@ class HotelCard extends StatelessWidget {
                                   );
                                 },
                                 errorBuilder: (context, error, stackTrace) {
-                                  print('HotelCard: Image load error: $error');
                                   return _buildImagePlaceholder(context);
                                 },
                               ),
@@ -278,7 +277,6 @@ class HotelCard extends StatelessWidget {
                                 );
                               },
                               errorBuilder: (context, error, stackTrace) {
-                                print('HotelCard: Image load error (list): $error');
                                 return _buildImagePlaceholder(context);
                               },
                             ),
@@ -586,12 +584,16 @@ class HotelCard extends StatelessWidget {
       return imageUrl; // Already a full URL
     }
     
-    // Remove leading slash if present
-    final cleanUrl = imageUrl.startsWith('/') ? imageUrl.substring(1) : imageUrl;
+    // Get base URL and ensure it doesn't end with /api
+    String baseUrl = ApiService.baseUrl;
+    if (baseUrl.endsWith('/api')) {
+      baseUrl = baseUrl.substring(0, baseUrl.length - 4);
+    }
     
-    // Construct full URL using the base URL from ApiService
-    final fullUrl = '${ApiService.baseUrl.replaceAll('/api', '')}/$cleanUrl';
-    print('HotelCard: Converting image URL: $imageUrl → $fullUrl');
+    // Ensure imageUrl starts with / for proper concatenation
+    String normalizedImageUrl = imageUrl.startsWith('/') ? imageUrl : '/$imageUrl';
+    
+    final fullUrl = '$baseUrl$normalizedImageUrl';
     return fullUrl;
   }
 }

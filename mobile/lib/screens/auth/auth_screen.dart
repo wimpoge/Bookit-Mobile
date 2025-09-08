@@ -402,7 +402,7 @@ class _LoginFormWidgetState extends State<LoginFormWidget> with AutomaticKeepAli
               alignment: Alignment.centerRight,
               child: TextButton(
                 onPressed: () {
-                  // TODO: Implement forgot password
+                  context.go('/forgot-password');
                 },
                 child: Text(
                   'Forgot password?',

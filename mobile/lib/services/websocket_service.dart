@@ -20,7 +20,7 @@ class WebSocketService {
     _token = token;
   }
   
-  Future<void> connectAsUser(int hotelId) async {
+  Future<void> connectAsUser(String hotelId) async {
     if (_token == null) {
       print('WebSocket: No token provided, using placeholder');
       _token = 'placeholder_token';
@@ -30,7 +30,7 @@ class WebSocketService {
     await _connect('$baseWsUrl/user/$hotelId?token=$_token');
   }
   
-  Future<void> connectAsOwner(int hotelId, int userId) async {
+  Future<void> connectAsOwner(String hotelId, String userId) async {
     if (_token == null) {
       throw Exception('Token not set');
     }

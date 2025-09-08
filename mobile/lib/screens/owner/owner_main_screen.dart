@@ -65,58 +65,62 @@ class _OwnerMainScreenState extends State<OwnerMainScreen> {
         ),
         child: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: _items.asMap().entries.map((entry) {
                 final index = entry.key;
                 final item = entry.value;
                 final isSelected = _selectedIndex == index;
 
-                return GestureDetector(
-                  onTap: () => _onItemTapped(index),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? Theme.of(context)
-                              .colorScheme
-                              .primary
-                              .withOpacity(0.1)
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          isSelected ? item.activeIcon : item.icon,
-                          color: isSelected
-                              ? Theme.of(context).colorScheme.primary
-                              : Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withOpacity(0.6),
-                          size: 24,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          item.label,
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            fontWeight:
-                                isSelected ? FontWeight.w600 : FontWeight.w400,
+                return Flexible(
+                  child: GestureDetector(
+                    onTap: () => _onItemTapped(index),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                      margin: const EdgeInsets.symmetric(horizontal: 2),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withOpacity(0.1)
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            isSelected ? item.activeIcon : item.icon,
                             color: isSelected
                                 ? Theme.of(context).colorScheme.primary
                                 : Theme.of(context)
                                     .colorScheme
                                     .onSurface
                                     .withOpacity(0.6),
+                            size: 24,
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 4),
+                          Text(
+                            item.label,
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              fontWeight:
+                                  isSelected ? FontWeight.w600 : FontWeight.w400,
+                              color: isSelected
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withOpacity(0.6),
+                            ),
+                            textAlign: TextAlign.center,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 );

@@ -18,6 +18,9 @@ class HotelsBloc extends Bloc<HotelsEvent, HotelsState> {
     on<HotelUpdateEvent>(_onUpdateHotel);
     on<HotelDeleteEvent>(_onDeleteHotel);
     on<OwnerHotelsLoadEvent>(_onLoadOwnerHotels);
+    on<OwnerHotelsFilterEvent>(_onFilterOwnerHotels);
+    on<HotelsNearbyEvent>(_onLoadNearbyHotels);
+    on<HotelsDealsEvent>(_onLoadHotelDeals);
   }
 
   Future<void> _onLoadHotels(
@@ -123,6 +126,59 @@ class HotelsBloc extends Bloc<HotelsEvent, HotelsState> {
 
     try {
       final hotels = await _apiService.getOwnerHotels();
+      emit(HotelsLoaded(hotels));
+    } catch (e) {
+      emit(HotelsError(e.toString()));
+    }
+  }
+
+  Future<void> _onFilterOwnerHotels(
+      OwnerHotelsFilterEvent event, Emitter<HotelsState> emit) async {
+    emit(HotelsLoading());
+
+    try {
+      final hotels = await _apiService.getOwnerHotels(
+        skip: event.skip,
+        limit: event.limit,
+        city: event.city,
+        status: event.status,
+        sortBy: event.sortBy,
+        sortDesc: event.sortDesc,
+        search: event.search,
+        minPrice: event.minPrice,
+        maxPrice: event.maxPrice,
+        minRating: event.minRating,
+      );
+      emit(HotelsLoaded(hotels));
+    } catch (e) {
+      emit(HotelsError(e.toString()));
+    }
+  }
+
+  Future<void> _onLoadNearbyHotels(
+      HotelsNearbyEvent event, Emitter<HotelsState> emit) async {
+    emit(HotelsLoading());
+
+    try {
+      final hotels = await _apiService.getNearbyHotels(
+        latitude: event.latitude,
+        longitude: event.longitude,
+        radiusKm: event.radiusKm,
+      );
+      emit(HotelsLoaded(hotels));
+    } catch (e) {
+      emit(HotelsError(e.toString()));
+    }
+  }
+
+  Future<void> _onLoadHotelDeals(
+      HotelsDealsEvent event, Emitter<HotelsState> emit) async {
+    emit(HotelsLoading());
+
+    try {
+      final hotels = await _apiService.getHotelDeals(
+        maxPrice: event.maxPriceFilter,
+      );
       emit(HotelsLoaded(hotels));
     } catch (e) {
       emit(HotelsError(e.toString()));

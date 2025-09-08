@@ -10,7 +10,7 @@ import '../../widgets/custom_button.dart';
 import '../../widgets/custom_text_field.dart';
 
 class EditHotelScreen extends StatefulWidget {
-  final int hotelId;
+  final String hotelId;
 
   const EditHotelScreen({
     Key? key,

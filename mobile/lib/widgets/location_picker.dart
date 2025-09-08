@@ -9,7 +9,7 @@ class LocationPicker extends StatefulWidget {
   final double? initialLatitude;
   final double? initialLongitude;
   final String? initialAddress;
-  final Function(double latitude, double longitude, String address) onLocationSelected;
+  final Function(double latitude, double longitude, String address, String street, String city, String country) onLocationSelected;
 
   const LocationPicker({
     Key? key,
@@ -29,6 +29,9 @@ class _LocationPickerState extends State<LocationPicker> {
   
   late LatLng _selectedLocation;
   String _selectedAddress = '';
+  String _selectedStreet = '';
+  String _selectedCity = '';
+  String _selectedCountry = '';
   bool _isLoading = false;
   Set<Marker> _markers = {};
 
@@ -114,6 +117,17 @@ class _LocationPickerState extends State<LocationPicker> {
       if (placemarks.isNotEmpty) {
         final geocoding.Placemark placemark = placemarks.first;
         setState(() {
+          // Extract individual components
+          _selectedStreet = [
+            placemark.street,
+            placemark.subThoroughfare,
+            placemark.thoroughfare,
+          ].where((element) => element != null && element.isNotEmpty).join(' ');
+          
+          _selectedCity = placemark.locality ?? placemark.subLocality ?? placemark.administrativeArea ?? '';
+          _selectedCountry = placemark.country ?? '';
+          
+          // Full address for display
           _selectedAddress = [
             placemark.street,
             placemark.subLocality,
@@ -127,6 +141,9 @@ class _LocationPickerState extends State<LocationPicker> {
       print('Error getting address: $e');
       setState(() {
         _selectedAddress = 'Address not found';
+        _selectedStreet = '';
+        _selectedCity = '';
+        _selectedCountry = '';
       });
     }
   }
@@ -261,6 +278,9 @@ class _LocationPickerState extends State<LocationPicker> {
                         _selectedLocation.latitude,
                         _selectedLocation.longitude,
                         _selectedAddress,
+                        _selectedStreet,
+                        _selectedCity,
+                        _selectedCountry,
                       );
                       Navigator.of(context).pop();
                     }

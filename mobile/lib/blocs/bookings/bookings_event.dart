@@ -10,7 +10,7 @@ abstract class BookingsEvent extends Equatable {
 class BookingsLoadEvent extends BookingsEvent {}
 
 class BookingDetailLoadEvent extends BookingsEvent {
-  final int bookingId;
+  final String bookingId;
 
   const BookingDetailLoadEvent({required this.bookingId});
 
@@ -28,7 +28,7 @@ class BookingCreateEvent extends BookingsEvent {
 }
 
 class BookingUpdateEvent extends BookingsEvent {
-  final int bookingId;
+  final String bookingId;
   final Map<String, dynamic> bookingData;
 
   const BookingUpdateEvent({
@@ -41,7 +41,7 @@ class BookingUpdateEvent extends BookingsEvent {
 }
 
 class BookingCancelEvent extends BookingsEvent {
-  final int bookingId;
+  final String bookingId;
 
   const BookingCancelEvent({required this.bookingId});
 
@@ -52,7 +52,7 @@ class BookingCancelEvent extends BookingsEvent {
 class OwnerBookingsLoadEvent extends BookingsEvent {}
 
 class BookingCheckInEvent extends BookingsEvent {
-  final int bookingId;
+  final String bookingId;
 
   const BookingCheckInEvent({required this.bookingId});
 
@@ -61,7 +61,7 @@ class BookingCheckInEvent extends BookingsEvent {
 }
 
 class BookingCheckOutEvent extends BookingsEvent {
-  final int bookingId;
+  final String bookingId;
 
   const BookingCheckOutEvent({required this.bookingId});
 
@@ -70,7 +70,7 @@ class BookingCheckOutEvent extends BookingsEvent {
 }
 
 class BookingConfirmEvent extends BookingsEvent {
-  final int bookingId;
+  final String bookingId;
 
   const BookingConfirmEvent({required this.bookingId});
 
@@ -79,7 +79,7 @@ class BookingConfirmEvent extends BookingsEvent {
 }
 
 class BookingRejectEvent extends BookingsEvent {
-  final int bookingId;
+  final String bookingId;
 
   const BookingRejectEvent({required this.bookingId});
 
@@ -88,7 +88,7 @@ class BookingRejectEvent extends BookingsEvent {
 }
 
 class BookingSelfCheckInEvent extends BookingsEvent {
-  final int bookingId;
+  final String bookingId;
 
   const BookingSelfCheckInEvent({required this.bookingId});
 
@@ -97,7 +97,7 @@ class BookingSelfCheckInEvent extends BookingsEvent {
 }
 
 class BookingSelfCheckOutEvent extends BookingsEvent {
-  final int bookingId;
+  final String bookingId;
 
   const BookingSelfCheckOutEvent({required this.bookingId});
 

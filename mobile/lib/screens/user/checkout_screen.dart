@@ -13,7 +13,7 @@ import '../../widgets/custom_button.dart';
 import '../../widgets/custom_text_field.dart';
 
 class CheckoutScreen extends StatefulWidget {
-  final int bookingId;
+  final String bookingId;
 
   const CheckoutScreen({
     Key? key,

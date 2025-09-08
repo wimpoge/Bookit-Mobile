@@ -218,42 +218,93 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
           ),
         ),
         
-        // Pagination controls
-        if (_totalPages > 1)
-          Container(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                ElevatedButton.icon(
-                  onPressed: _hasPrevPage ? _prevPage : null,
-                  icon: const Icon(Icons.chevron_left),
-                  label: const Text('Previous'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _hasPrevPage ? Colors.blue : Colors.grey,
-                    foregroundColor: Colors.white,
-                  ),
-                ),
-                Text(
-                  '$_currentPage / $_totalPages',
-                  style: GoogleFonts.poppins(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                ElevatedButton.icon(
-                  onPressed: _hasNextPage ? _nextPage : null,
-                  icon: const Icon(Icons.chevron_right),
-                  label: const Text('Next'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _hasNextPage ? Colors.blue : Colors.grey,
-                    foregroundColor: Colors.white,
-                  ),
-                ),
-              ],
+        // Modern Pagination
+        if (_totalPages > 1) _buildSimplePagination(),
+      ],
+    );
+  }
+
+  Widget _buildSimplePagination() {
+    return Container(
+      margin: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 24), // Extra bottom margin
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Previous Button
+          GestureDetector(
+            onTap: _hasPrevPage ? _prevPage : null,
+            child: Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: _hasPrevPage 
+                    ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(16),
+                border: _hasPrevPage 
+                    ? Border.all(
+                        color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                      )
+                    : null,
+              ),
+              child: Icon(
+                Icons.chevron_left,
+                size: 18,
+                color: _hasPrevPage 
+                    ? Theme.of(context).colorScheme.primary
+                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+              ),
             ),
           ),
-      ],
+          
+          const SizedBox(width: 16),
+          
+          // Page Info
+          Text(
+            '$_currentPage of $_totalPages',
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
+          
+          const SizedBox(width: 16),
+          
+          // Next Button
+          GestureDetector(
+            onTap: _hasNextPage ? _nextPage : null,
+            child: Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: _hasNextPage 
+                    ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(16),
+                border: _hasNextPage 
+                    ? Border.all(
+                        color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                      )
+                    : null,
+              ),
+              child: Icon(
+                Icons.chevron_right,
+                size: 18,
+                color: _hasNextPage 
+                    ? Theme.of(context).colorScheme.primary
+                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
