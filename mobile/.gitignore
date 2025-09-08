@@ -110,6 +110,7 @@ firebase_options.dart
 **/lib/**/api_keys.dart
 **/lib/**/secrets.dart
 **/.env.dart
+.env
 
 # iOS Keychain & Android Keystore
 ios/Runner/GoogleService-Info.plist
