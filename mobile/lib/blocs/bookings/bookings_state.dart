@@ -119,3 +119,16 @@ class BookingsError extends BookingsState {
   @override
   List<Object> get props => [_message];
 }
+
+class BookingCreateWithPaymentSuccess extends BookingsState {
+  final Booking booking;
+  final String _message;
+
+  const BookingCreateWithPaymentSuccess(this.booking, this._message);
+
+  @override
+  String get message => _message;
+
+  @override
+  List<Object> get props => [booking, _message];
+}

@@ -5,7 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../blocs/payments/payments_bloc.dart';
 import '../../models/payment.dart';
 import '../../widgets/custom_button.dart';
-import '../../widgets/add_payment_method_bottom_sheet.dart';
+import '../../widgets/stripe_add_payment_method_bottom_sheet.dart';
 
 class PaymentScreen extends StatefulWidget {
   const PaymentScreen({Key? key}) : super(key: key);
@@ -28,7 +28,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => const AddPaymentMethodBottomSheet(),
+      builder: (context) => const StripeAddPaymentMethodBottomSheet(),
     );
   }
 

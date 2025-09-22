@@ -40,16 +40,25 @@ class _BookingBottomSheetState extends State<BookingBottomSheet> {
       ),
       child: BlocListener<BookingsBloc, BookingsState>(
         listener: (context, state) {
+          print('📱 BookingBottomSheet received state: ${state.runtimeType}');
           if (state is BookingActionSuccess) {
+            print('✅ Booking created successfully: ${state.booking?.id}');
             Navigator.of(context).pop();
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: Colors.green,
-              ),
-            );
-            context.go('/bookings');
+            if (state.booking != null) {
+              print('🧭 Navigating to payment screen for booking: ${state.booking!.id}');
+              // Redirect to payment screen with 1-minute timeout
+              context.go('/complete-payment/${state.booking!.id}');
+            } else {
+              print('❌ Booking object is null, cannot navigate to payment');
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Booking created but unable to proceed to payment'),
+                  backgroundColor: Colors.orange,
+                ),
+              );
+            }
           } else if (state is BookingsError) {
+            print('❌ Booking error: ${state.message}');
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.message),

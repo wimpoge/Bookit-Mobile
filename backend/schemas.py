@@ -155,17 +155,26 @@ class BookingResponse(BaseModel):
         from_attributes = True
 
 class PaymentMethodBase(BaseModel):
-    type: str
-    provider: str
-    account_info: dict
+    type: str  # "card", "bank_account", "digital_wallet"
+    provider: str  # "visa", "mastercard", "apple_pay", "google_pay", etc.
 
 class PaymentMethodCreate(PaymentMethodBase):
+    is_default: Optional[bool] = False
+    # For Stripe setup
+    setup_intent_id: Optional[str] = None  # For 3D Secure authentication
+
+class StripePaymentMethodCreate(BaseModel):
+    payment_method_id: str  # Stripe payment method ID
     is_default: Optional[bool] = False
 
 class PaymentMethodResponse(PaymentMethodBase):
     id: str
     user_id: str
     is_default: bool
+    last_four_digits: Optional[str] = None
+    expiry_month: Optional[int] = None
+    expiry_year: Optional[int] = None
+    cardholder_name: Optional[str] = None
     created_at: datetime
    
     class Config:
@@ -173,8 +182,21 @@ class PaymentMethodResponse(PaymentMethodBase):
 
 class PaymentCreate(BaseModel):
     booking_id: str
-    payment_method_id: str
+    payment_method_id: Optional[str] = None
     amount: float
+    currency: Optional[str] = "usd"
+
+class StripePaymentCreate(BaseModel):
+    booking_id: str
+    payment_method_id: str
+    confirm: Optional[bool] = True
+
+class PaymentIntentResponse(BaseModel):
+    client_secret: str
+    payment_intent_id: str
+    amount: float
+    currency: str
+    status: str
 
 class PaymentResponse(BaseModel):
     id: str
@@ -182,6 +204,8 @@ class PaymentResponse(BaseModel):
     currency: str
     status: str
     transaction_id: Optional[str] = None
+    payment_intent_id: Optional[str] = None
+    client_secret: Optional[str] = None
     created_at: datetime
    
     class Config:

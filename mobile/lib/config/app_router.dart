@@ -20,6 +20,7 @@ import '../screens/user/checkout_screen.dart';
 import '../screens/user/reviews_screen.dart';
 import '../screens/user/chats_screen.dart';
 import '../screens/user/favorites_screen.dart';
+import '../screens/user/complete_payment_screen.dart';
 import '../screens/owner/owner_main_screen.dart';
 import '../screens/owner/owner_hotels_screen.dart';
 import '../screens/owner/owner_chats_screen.dart';
@@ -237,6 +238,24 @@ class AppRouter {
             builder: (context, state) => CheckoutScreen(
               bookingId: state.pathParameters['bookingId']!,
             ),
+          ),
+          GoRoute(
+            path: '/booking-payment',
+            builder: (context, state) {
+              final extra = state.extra as Map<String, dynamic>;
+              return CompletePaymentScreen(
+                bookingId: extra['booking_id'].toString(),
+              );
+            },
+          ),
+          GoRoute(
+            path: '/complete-payment/:bookingId',
+            builder: (context, state) {
+              final bookingId = state.pathParameters['bookingId']!;
+              return CompletePaymentScreen(
+                bookingId: bookingId,
+              );
+            },
           ),
         ],
       ),

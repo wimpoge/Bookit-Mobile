@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../blocs/bookings/bookings_bloc.dart';
 import '../../models/booking.dart';
@@ -229,9 +230,70 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                     ),
                   ],
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
+                // QR Code for confirmed bookings
+                if (booking.status == BookingStatus.confirmed && booking.qrCode != null)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.qr_code,
+                              color: Theme.of(context).colorScheme.primary,
+                              size: 24,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Check-in QR Code',
+                              style: GoogleFonts.poppins(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: QrImageView(
+                            data: booking.qrCode!,
+                            version: QrVersions.auto,
+                            size: 200.0,
+                            backgroundColor: Colors.white,
+                            foregroundColor: Colors.black,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Show this QR code to hotel staff for check-in',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
+
                 // Hotel name and location
                 Text(
                   booking.hotel.name,
@@ -599,7 +661,33 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
   }
 
   Widget _buildActionButtons(Booking booking) {
-    if (booking.canCancel) {
+    // Check if booking requires payment (pending status)
+    if (booking.status == 'pending') {
+      return Column(
+        children: [
+          CustomButton(
+            text: 'Complete Payment with Stripe',
+            onPressed: () {
+              context.go('/complete-payment/${booking.id}', extra: {
+                'booking': booking,
+                'hotel': booking.hotel,
+                'amount': booking.totalPrice,
+              });
+            },
+            icon: Icons.payment,
+            backgroundColor: Colors.orange,
+          ),
+          const SizedBox(height: 12),
+          CustomButton(
+            text: 'Cancel Booking',
+            onPressed: () => _showCancelDialog(booking),
+            isOutlined: true,
+            backgroundColor: Colors.red,
+            icon: Icons.cancel_outlined,
+          ),
+        ],
+      );
+    } else if (booking.canCancel) {
       return Column(
         children: [
           CustomButton(

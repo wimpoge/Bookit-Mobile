@@ -8,11 +8,14 @@ part 'bookings_state.dart';
 
 class BookingsBloc extends Bloc<BookingsEvent, BookingsState> {
   final ApiService _apiService;
+  
+  ApiService get apiService => _apiService;
 
   BookingsBloc(this._apiService) : super(BookingsInitial()) {
     on<BookingsLoadEvent>(_onLoadBookings);
     on<BookingDetailLoadEvent>(_onLoadBookingDetail);
     on<BookingCreateEvent>(_onCreateBooking);
+    on<BookingCreateWithPaymentEvent>(_onCreateBookingWithPayment);
     on<BookingUpdateEvent>(_onUpdateBooking);
     on<BookingCancelEvent>(_onCancelBooking);
     on<OwnerBookingsLoadEvent>(_onLoadOwnerBookings);
@@ -164,6 +167,20 @@ class BookingsBloc extends Bloc<BookingsEvent, BookingsState> {
     try {
       await _apiService.rejectBooking(event.bookingId);
       emit(BookingRejectSuccess('Booking rejected successfully'));
+    } catch (e) {
+      emit(BookingsError(e.toString()));
+    }
+  }
+
+  Future<void> _onCreateBookingWithPayment(
+      BookingCreateWithPaymentEvent event, Emitter<BookingsState> emit) async {
+    emit(BookingActionLoading());
+    try {
+      final booking = await _apiService.bookWithPayment(
+        bookingData: event.bookingData,
+        paymentMethodId: event.paymentMethodId,
+      );
+      emit(BookingCreateWithPaymentSuccess(booking, 'Booking confirmed and payment successful!'));
     } catch (e) {
       emit(BookingsError(e.toString()));
     }

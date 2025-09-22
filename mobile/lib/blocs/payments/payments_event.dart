@@ -50,3 +50,43 @@ class PaymentProcessEvent extends PaymentsEvent {
 }
 
 class PaymentsLoadEvent extends PaymentsEvent {}
+
+// Stripe-specific events
+class StripeSetupIntentCreateEvent extends PaymentsEvent {}
+
+class StripePaymentMethodAddEvent extends PaymentsEvent {
+  final String paymentMethodId;
+  final bool isDefault;
+
+  const StripePaymentMethodAddEvent({
+    required this.paymentMethodId,
+    this.isDefault = false,
+  });
+
+  @override
+  List<Object> get props => [paymentMethodId, isDefault];
+}
+
+class StripePaymentIntentCreateEvent extends PaymentsEvent {
+  final String bookingId;
+  final String paymentMethodId;
+  final bool confirm;
+
+  const StripePaymentIntentCreateEvent({
+    required this.bookingId,
+    required this.paymentMethodId,
+    this.confirm = true,
+  });
+
+  @override
+  List<Object> get props => [bookingId, paymentMethodId, confirm];
+}
+
+class StripePaymentConfirmEvent extends PaymentsEvent {
+  final String paymentIntentId;
+
+  const StripePaymentConfirmEvent({required this.paymentIntentId});
+
+  @override
+  List<Object> get props => [paymentIntentId];
+}

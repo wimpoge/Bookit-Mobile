@@ -81,32 +81,38 @@ class OwnerBookingCard extends StatelessWidget {
                       children: [
                         Row(
                           children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: _getStatusColor(booking.status)
-                                    .withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                _getStatusText(booking.status),
-                                style: GoogleFonts.poppins(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                  color: _getStatusColor(booking.status),
+                            Flexible(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: _getStatusColor(booking.status)
+                                      .withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  _getStatusText(booking.status),
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: _getStatusColor(booking.status),
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                             ),
-                            const Spacer(),
-                            Text(
-                              '#${booking.id}',
-                              style: GoogleFonts.poppins(
-                                fontSize: 12,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
-                                    .withOpacity(0.6),
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                '#${booking.id.substring(0, 8)}...',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withOpacity(0.6),
+                                ),
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ],
@@ -157,6 +163,7 @@ class OwnerBookingCard extends StatelessWidget {
                                       .onSurface
                                       .withOpacity(0.8),
                                 ),
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ],
@@ -173,14 +180,17 @@ class OwnerBookingCard extends StatelessWidget {
                                   .withOpacity(0.6),
                             ),
                             const SizedBox(width: 4),
-                            Text(
-                              '${booking.guests} guest${booking.guests > 1 ? 's' : ''} • ${booking.numberOfNights} night${booking.numberOfNights > 1 ? 's' : ''}',
-                              style: GoogleFonts.poppins(
-                                fontSize: 12,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
-                                    .withOpacity(0.8),
+                            Expanded(
+                              child: Text(
+                                '${booking.guests} guest${booking.guests > 1 ? 's' : ''} • ${booking.numberOfNights} night${booking.numberOfNights > 1 ? 's' : ''}',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withOpacity(0.8),
+                                ),
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ],

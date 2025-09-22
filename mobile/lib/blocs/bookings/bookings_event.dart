@@ -104,3 +104,16 @@ class BookingSelfCheckOutEvent extends BookingsEvent {
   @override
   List<Object> get props => [bookingId];
 }
+
+class BookingCreateWithPaymentEvent extends BookingsEvent {
+  final Map<String, dynamic> bookingData;
+  final String paymentMethodId;
+
+  const BookingCreateWithPaymentEvent({
+    required this.bookingData,
+    required this.paymentMethodId,
+  });
+
+  @override
+  List<Object> get props => [bookingData, paymentMethodId];
+}

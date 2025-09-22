@@ -434,6 +434,94 @@ class ApiService {
     return data.map((json) => Payment.fromJson(json)).toList();
   }
 
+  // Stripe-specific payment methods
+  Future<Map<String, dynamic>> getStripeConfig() async {
+    final response = await _makeRequest('GET', '/payments/config');
+    return jsonDecode(response.body);
+  }
+
+  Future<Map<String, dynamic>> createSetupIntent() async {
+    final response = await _makeRequest('POST', '/payments/setup-intent');
+    return jsonDecode(response.body);
+  }
+
+  Future<PaymentMethod> addStripePaymentMethod({
+    required String paymentMethodId,
+    bool isDefault = false,
+  }) async {
+    final response = await _makeRequest('POST', '/payments/methods', body: {
+      'payment_method_id': paymentMethodId,
+      'is_default': isDefault,
+    });
+    return PaymentMethod.fromJson(jsonDecode(response.body));
+  }
+
+  Future<Map<String, dynamic>> createPaymentIntent({
+    required String bookingId,
+    required String paymentMethodId,
+    bool confirm = true,
+  }) async {
+    final response = await _makeRequest('POST', '/payments/create-payment-intent', body: {
+      'booking_id': bookingId,
+      'payment_method_id': paymentMethodId,
+      'confirm': confirm,
+    });
+    return jsonDecode(response.body);
+  }
+
+  Future<Map<String, dynamic>> confirmPayment(String paymentIntentId) async {
+    final response = await _makeRequest('POST', '/payments/confirm/$paymentIntentId');
+    return jsonDecode(response.body);
+  }
+
+  // New booking payment methods with Stripe Payment Links
+  Future<Map<String, dynamic>> createBookingPaymentLink({
+    required String bookingId,
+  }) async {
+    final response = await _makeRequest('POST', '/payments/create-booking-payment-link', body: {
+      'booking_id': bookingId,
+    });
+    return jsonDecode(response.body);
+  }
+
+  Future<Map<String, dynamic>> confirmPaymentLinkSuccess({
+    required String bookingId,
+    required String sessionId,
+  }) async {
+    final response = await _makeRequest('POST', '/payments/confirm-payment-link-success/$bookingId', body: {
+      'session_id': sessionId,
+    });
+    return jsonDecode(response.body);
+  }
+
+  // Legacy method for backward compatibility
+  Future<Map<String, dynamic>> createBookingPaymentIntent({
+    required String bookingId,
+  }) async {
+    return createBookingPaymentLink(bookingId: bookingId);
+  }
+
+  Future<Map<String, dynamic>> confirmBookingPayment(String paymentIntentId) async {
+    final response = await _makeRequest('POST', '/payments/confirm-booking-payment/$paymentIntentId');
+    return jsonDecode(response.body);
+  }
+
+  Future<Booking> bookWithPayment({
+    required Map<String, dynamic> bookingData,
+    required String paymentMethodId,
+  }) async {
+    final Map<String, dynamic> requestBody = {
+      ...bookingData,
+    };
+    
+    final response = await _makeRequest(
+      'POST', 
+      '/bookings/book-with-payment?payment_method_id=$paymentMethodId', 
+      body: requestBody
+    );
+    return Booking.fromJson(jsonDecode(response.body));
+  }
+
   Future<List<Review>> getHotelReviews(String hotelId) async {
     final response = await _makeRequest('GET', '/reviews/hotel/$hotelId');
     final List<dynamic> data = jsonDecode(response.body);

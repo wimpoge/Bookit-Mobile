@@ -8,6 +8,8 @@ part 'payments_state.dart';
 
 class PaymentsBloc extends Bloc<PaymentsEvent, PaymentsState> {
   final ApiService _apiService;
+  
+  ApiService get apiService => _apiService;
 
   PaymentsBloc(this._apiService) : super(PaymentsInitial()) {
     on<PaymentMethodsLoadEvent>(_onLoadPaymentMethods);

@@ -83,6 +83,9 @@ class User(Base):
     reset_token = Column(String)
     reset_token_expires = Column(DateTime(timezone=True))
     
+    # Payment Provider (temporarily commented out to avoid DB migration)
+    # provider_customer_id = Column(String)  # Stripe customer ID
+    
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
@@ -283,8 +286,8 @@ class Booking(Base):
     
     # Payment
     payment_id = Column(String, ForeignKey("payments.id"))  # Keep for backward compatibility
-    payment_status = Column(String, default=PaymentStatus.PENDING)
-    paid_amount = Column(Numeric(10, 2), default=0)
+    # payment_status = Column(String, default=PaymentStatus.PENDING)  # Temporarily commented
+    # paid_amount = Column(Numeric(10, 2), default=0)  # Temporarily commented
     
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -392,8 +395,9 @@ class PaymentMethod(Base):
     cardholder_name = Column(String)
     
     # External References
-    provider_token = Column(String)  # Token from payment provider
-    provider_customer_id = Column(String)
+    provider_token = Column(String)  # Token from payment provider (Stripe payment method ID)
+    provider_customer_id = Column(String)  # Stripe customer ID
+    # stripe_payment_method_id = Column(String)  # Stripe payment method ID (temporarily commented)
     
     # Settings
     is_default = Column(Boolean, default=False)

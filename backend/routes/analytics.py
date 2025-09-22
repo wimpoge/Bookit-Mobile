@@ -7,21 +7,18 @@ import calendar
 
 from database import get_db
 from models import User, Hotel, Booking, Review
-from auth.auth import get_current_user
+from auth.auth import get_current_user, get_current_owner
 
 router = APIRouter()
 
-@router.get("/analytics/overview")
+@router.get("/overview")
 async def get_analytics_overview(
     period: str = Query("this_month", description="Period: today, this_week, this_month, last_month, this_year, etc."),
     hotel_id: Optional[int] = Query(None, description="Specific hotel ID, if not provided, returns all hotels for owner"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_owner)
 ):
     """Get analytics overview for hotel owner"""
-    
-    if current_user.role != "owner":
-        raise HTTPException(status_code=403, detail="Only hotel owners can access analytics")
     
     # Get date range based on period
     start_date, end_date = get_date_range(period)
@@ -109,17 +106,14 @@ async def get_analytics_overview(
         }
     }
 
-@router.get("/analytics/revenue-trend")
+@router.get("/revenue-trend")
 async def get_revenue_trend(
     period: str = Query("this_month"),
     hotel_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_owner)
 ):
     """Get revenue trend data for charts"""
-    
-    if current_user.role != "owner":
-        raise HTTPException(status_code=403, detail="Only hotel owners can access analytics")
     
     start_date, end_date = get_date_range(period)
     
@@ -181,17 +175,14 @@ async def get_revenue_trend(
         "chart_data": chart_data
     }
 
-@router.get("/analytics/bookings-trend")
+@router.get("/bookings-trend")
 async def get_bookings_trend(
     period: str = Query("this_month"),
     hotel_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_owner)
 ):
     """Get bookings trend data for charts"""
-    
-    if current_user.role != "owner":
-        raise HTTPException(status_code=403, detail="Only hotel owners can access analytics")
     
     start_date, end_date = get_date_range(period)
     
@@ -238,17 +229,14 @@ async def get_bookings_trend(
         "chart_data": chart_data
     }
 
-@router.get("/analytics/guest-ratings")
+@router.get("/guest-ratings")
 async def get_guest_ratings(
     period: str = Query("this_month"),
     hotel_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_owner)
 ):
     """Get guest ratings distribution"""
-    
-    if current_user.role != "owner":
-        raise HTTPException(status_code=403, detail="Only hotel owners can access analytics")
     
     start_date, end_date = get_date_range(period)
     
@@ -286,61 +274,207 @@ async def get_guest_ratings(
         "ratings_distribution": ratings_distribution
     }
 
-@router.get("/analytics/revenue-breakdown")
+@router.get("/revenue-breakdown")
 async def get_revenue_breakdown(
     period: str = Query("this_month"),
     hotel_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_owner)
 ):
     """Get revenue breakdown by different categories"""
-    
-    if current_user.role != "owner":
-        raise HTTPException(status_code=403, detail="Only hotel owners can access analytics")
-    
+
     start_date, end_date = get_date_range(period)
-    
+
     base_query = db.query(Booking).join(Hotel).filter(
         Hotel.owner_id == current_user.id,
         Booking.status == "confirmed",
         Booking.created_at >= start_date,
         Booking.created_at <= end_date
     )
-    
+
     if hotel_id:
         base_query = base_query.filter(Hotel.id == hotel_id)
-    
+
     # Get total revenue
     total_revenue = base_query.with_entities(func.sum(Booking.total_price)).scalar() or 0
-    
+
     # Simple breakdown (in real app, you might have more detailed pricing structure)
     room_revenue = total_revenue * 0.85  # 85% room bookings
     service_fees = total_revenue * 0.10  # 10% service fees
     extras = total_revenue * 0.04        # 4% extra services
     cancellation_fees = total_revenue * 0.01  # 1% cancellation fees
-    
+
     breakdown = [
         {"category": "Room Bookings", "amount": float(room_revenue), "percentage": 0.85},
         {"category": "Service Fees", "amount": float(service_fees), "percentage": 0.10},
         {"category": "Extra Services", "amount": float(extras), "percentage": 0.04},
         {"category": "Cancellation Fees", "amount": float(cancellation_fees), "percentage": 0.01},
     ]
-    
+
     return {
         "period": period,
         "total_revenue": float(total_revenue),
         "breakdown": breakdown
     }
 
-@router.get("/analytics/hotels")
+@router.get("/checkout-performance")
+async def get_checkout_performance(
+    period: str = Query("this_month"),
+    hotel_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_owner)
+):
+    """Get checkout-based performance analytics"""
+
+    start_date, end_date = get_date_range(period)
+
+    # Base query for checkout analysis
+    base_query = db.query(Booking).join(Hotel).filter(
+        Hotel.owner_id == current_user.id,
+        Booking.status == "checked_out",
+        Booking.actual_check_out >= start_date,
+        Booking.actual_check_out <= end_date
+    )
+
+    if hotel_id:
+        base_query = base_query.filter(Hotel.id == hotel_id)
+
+    # Get checkout metrics
+    total_checkouts = base_query.count()
+
+    # Revenue from completed stays only
+    checkout_revenue = base_query.with_entities(func.sum(Booking.total_price)).scalar() or 0
+
+    # Average stay duration for checked out guests
+    avg_stay_duration = base_query.with_entities(
+        func.avg(func.julianday(Booking.actual_check_out) - func.julianday(Booking.actual_check_in))
+    ).scalar() or 0
+
+    # Guest satisfaction (only from completed stays)
+    checkout_reviews = db.query(Review).join(Booking).join(Hotel).filter(
+        Hotel.owner_id == current_user.id,
+        Booking.status == "checked_out",
+        Booking.actual_check_out >= start_date,
+        Booking.actual_check_out <= end_date
+    )
+
+    if hotel_id:
+        checkout_reviews = checkout_reviews.filter(Hotel.id == hotel_id)
+
+    avg_checkout_rating = checkout_reviews.with_entities(func.avg(Review.overall_rating)).scalar() or 0
+    total_checkout_reviews = checkout_reviews.count()
+
+    # Checkout trends by day of week
+    checkout_by_day = base_query.with_entities(
+        func.strftime('%w', Booking.actual_check_out).label('day_of_week'),
+        func.count(Booking.id).label('checkout_count')
+    ).group_by(func.strftime('%w', Booking.actual_check_out)).all()
+
+    day_names = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+    checkout_trends = []
+    for day_num in range(7):
+        count = next((row.checkout_count for row in checkout_by_day if int(row.day_of_week) == day_num), 0)
+        checkout_trends.append({
+            "day": day_names[day_num],
+            "checkouts": count
+        })
+
+    # Early vs late checkouts
+    early_checkouts = base_query.filter(
+        func.time(Booking.actual_check_out) < '11:00:00'
+    ).count()
+
+    late_checkouts = base_query.filter(
+        func.time(Booking.actual_check_out) > '12:00:00'
+    ).count()
+
+    return {
+        "period": period,
+        "checkout_metrics": {
+            "total_checkouts": total_checkouts,
+            "checkout_revenue": float(checkout_revenue),
+            "avg_stay_duration": round(float(avg_stay_duration), 2),
+            "avg_rating": round(float(avg_checkout_rating), 2),
+            "total_reviews": total_checkout_reviews
+        },
+        "checkout_trends": checkout_trends,
+        "checkout_timing": {
+            "early_checkouts": early_checkouts,
+            "late_checkouts": late_checkouts,
+            "on_time_checkouts": max(0, total_checkouts - early_checkouts - late_checkouts)
+        }
+    }
+
+@router.get("/guest-lifecycle")
+async def get_guest_lifecycle(
+    period: str = Query("this_month"),
+    hotel_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_owner)
+):
+    """Get guest lifecycle analytics from booking to checkout"""
+
+    start_date, end_date = get_date_range(period)
+
+    base_query = db.query(Booking).join(Hotel).filter(
+        Hotel.owner_id == current_user.id,
+        Booking.created_at >= start_date,
+        Booking.created_at <= end_date
+    )
+
+    if hotel_id:
+        base_query = base_query.filter(Hotel.id == hotel_id)
+
+    # Booking funnel analysis
+    total_bookings = base_query.count()
+    confirmed_bookings = base_query.filter(Booking.status.in_(["confirmed", "checked_in", "checked_out"])).count()
+    checked_in = base_query.filter(Booking.status.in_(["checked_in", "checked_out"])).count()
+    checked_out = base_query.filter(Booking.status == "checked_out").count()
+    cancelled = base_query.filter(Booking.status == "cancelled").count()
+    no_shows = base_query.filter(Booking.status == "no_show").count()
+
+    # Conversion rates
+    confirmation_rate = (confirmed_bookings / total_bookings * 100) if total_bookings > 0 else 0
+    checkin_rate = (checked_in / confirmed_bookings * 100) if confirmed_bookings > 0 else 0
+    completion_rate = (checked_out / checked_in * 100) if checked_in > 0 else 0
+
+    # Revenue by status
+    confirmed_revenue = base_query.filter(
+        Booking.status.in_(["confirmed", "checked_in", "checked_out"])
+    ).with_entities(func.sum(Booking.total_price)).scalar() or 0
+
+    checkout_revenue = base_query.filter(
+        Booking.status == "checked_out"
+    ).with_entities(func.sum(Booking.total_price)).scalar() or 0
+
+    return {
+        "period": period,
+        "booking_funnel": {
+            "total_bookings": total_bookings,
+            "confirmed_bookings": confirmed_bookings,
+            "checked_in": checked_in,
+            "checked_out": checked_out,
+            "cancelled": cancelled,
+            "no_shows": no_shows
+        },
+        "conversion_rates": {
+            "confirmation_rate": round(confirmation_rate, 2),
+            "checkin_rate": round(checkin_rate, 2),
+            "completion_rate": round(completion_rate, 2)
+        },
+        "revenue_tracking": {
+            "total_revenue_confirmed": float(confirmed_revenue),
+            "total_revenue_completed": float(checkout_revenue),
+            "revenue_completion_rate": round((checkout_revenue / confirmed_revenue * 100) if confirmed_revenue > 0 else 0, 2)
+        }
+    }
+
+@router.get("/hotels")
 async def get_owner_hotels(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_owner)
 ):
     """Get list of hotels for the owner"""
-    
-    if current_user.role != "owner":
-        raise HTTPException(status_code=403, detail="Only hotel owners can access this data")
     
     hotels = db.query(Hotel).filter(Hotel.owner_id == current_user.id).all()
     
